@@ -1,0 +1,120 @@
+---
+title: Publishing
+description: "Publish your Clip to the Pinix Registry and share it with the world."
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+Publishing your Clip makes it installable by anyone with `pinix hub add @yourscope/name`.
+
+## Prerequisites
+
+- A working Clip (tested locally with `pinix hub add local/...`)
+- Logged in: `pinix login` (Registry uses the same auth as Hub)
+
+## Publish
+
+<Steps>
+
+1. **Verify your identity**
+
+   ```bash
+   pinix registry whoami
+   # → @yourscope
+   ```
+
+2. **Check your `clip.json`**
+
+   Ensure the package name matches your scope:
+
+   ```json
+   {
+     "name": "@yourscope/my-clip",
+     "version": "0.1.0",
+     "description": "What this Clip does",
+     "main": "src/index.ts"
+   }
+   ```
+
+3. **Build Web UI (if applicable)**
+
+   ```bash
+   cd web && bun run build && cd ..
+   ```
+
+4. **Publish**
+
+   ```bash
+   pinix registry publish .
+   ```
+
+   This packages your Clip directory and uploads it to the Registry.
+
+</Steps>
+
+## Version management
+
+The Registry follows semver. To publish a new version:
+
+1. Update `version` in `clip.json`
+2. Run `pinix registry publish .` again
+
+```json
+{
+  "name": "@yourscope/my-clip",
+  "version": "0.2.0"
+}
+```
+
+<Aside type="caution">
+  You cannot overwrite an existing version. Each publish must have a new version number.
+</Aside>
+
+## Scope and permissions
+
+- You can only publish to your own scope (`@yourscope/`)
+- The scope is determined by your login identity
+- Other users install with: `pinix hub add @yourscope/my-clip`
+
+## Sharing vs Publishing
+
+**Publishing** puts code in the Registry — users download and run the Clip on their own machine.
+
+**Sharing** (via the Console's Sharing feature) exposes a *running instance* of your Clip to other users. The code stays on your machine; invocations are routed through the Cloud Hub.
+
+| | Publishing | Sharing |
+|---|---|---|
+| Code distribution | Yes (Registry) | No (runs on your machine) |
+| User runs on | Their machine | Your machine (via Cloud Hub) |
+| Monetization | Not directly | Per-use pricing via Credits |
+| Visibility | Registry search | Marketplace (shared Clips) |
+
+## What gets published
+
+The publish command packages:
+
+```
+my-clip/
+├── clip.json         ✓ Always included
+├── src/              ✓ Source code
+├── package.json      ✓ Dependencies
+├── node_modules/     ✗ Excluded (installed on user's machine)
+├── web/dist/         ✓ Built Web UI (if exists)
+├── web/src/          ✗ Web source (excluded if dist/ exists)
+└── .git/             ✗ Excluded
+```
+
+## Verifying your published Clip
+
+After publishing, verify it's accessible:
+
+```bash
+# Search for it
+pinix registry search my-clip
+
+# Check package details
+pinix registry info @yourscope/my-clip
+
+# Install it (on another machine or after removing local)
+pinix hub add @yourscope/my-clip
+```

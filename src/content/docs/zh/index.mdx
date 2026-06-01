@@ -1,0 +1,96 @@
+---
+title: Pinix 文档
+description: "Pinix — AI Agent 的能力平台。安装 Clip，扩展 Agent 能力，构建和分享能力。"
+template: splash
+hero:
+  tagline: "AI Agent 的能力平台。More Clips, More Intelligence."
+  actions:
+    - text: 快速开始
+      link: /zh/getting-started/installation/
+      icon: right-arrow
+      variant: primary
+    - text: 核心概念
+      link: /zh/concepts/
+      icon: open-book
+    - text: GitHub
+      link: https://github.com/epiral/pinix
+      icon: github
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+
+## 快速上手
+
+<CardGrid>
+  <LinkCard
+    title="安装 Pinix"
+    description="一条命令安装所有组件。支持 macOS 和 Linux。"
+    href="/zh/getting-started/installation/"
+  />
+  <LinkCard
+    title="快速开始"
+    description="启动守护进程、登录、60 秒内调用第一个 Clip。"
+    href="/zh/getting-started/quick-start/"
+  />
+  <LinkCard
+    title="第一个 Clip"
+    description="从 Registry 安装一个 Clip 并使用它。"
+    href="/zh/getting-started/first-clip/"
+  />
+  <LinkCard
+    title="MCP 集成"
+    description="在 Claude Desktop、Cursor 等 MCP 客户端中使用 Clip。"
+    href="/zh/getting-started/mcp-integration/"
+  />
+</CardGrid>
+
+## 理解架构
+
+<CardGrid>
+  <LinkCard
+    title="什么是 Clip？"
+    description="知识 + 能力 + 资产 —— 三层模型。"
+    href="/zh/concepts/clips/"
+  />
+  <LinkCard
+    title="Hub 与路由"
+    description="Hub 如何将 Agent 连接到 Clip。"
+    href="/zh/concepts/hub-and-routing/"
+  />
+  <LinkCard
+    title="Agent 薄，Clip 厚"
+    description="为什么 Pinix Agent 不需要最强模型。"
+    href="/zh/concepts/agent-and-clips/"
+  />
+  <LinkCard
+    title="Clip vs MCP vs GPTs"
+    description="与其他工具框架的功能对比。"
+    href="/zh/concepts/clips-vs-mcp/"
+  />
+</CardGrid>
+
+## 构建能力
+
+<CardGrid>
+  <LinkCard
+    title="构建 Clip"
+    description="用 @pinixai/core 创建 Clip 并本地测试。"
+    href="/zh/clip-development/getting-started/"
+  />
+  <LinkCard
+    title="设计原则"
+    description="Agent-Native 设计：token 经济、无状态操作、行动就绪响应。"
+    href="/zh/clip-development/design-principles/"
+  />
+  <LinkCard
+    title="BB-Browser"
+    description="36 个平台，103 个命令 —— 浏览器就是 API。"
+    href="/zh/edge-clips/bb-browser/"
+  />
+  <LinkCard
+    title="发布"
+    description="通过 Registry 将你的 Clip 分享给全世界。"
+    href="/zh/clip-development/publishing/"
+  />
+</CardGrid>

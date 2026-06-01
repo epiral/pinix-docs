@@ -1,0 +1,183 @@
+---
+title: Building Your First Clip
+description: "Create a Clip with @pinixai/core, add commands, test locally, and publish to the Registry."
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+A Clip is a TypeScript package built with `@pinixai/core`. It defines commands that Agents (and humans) can invoke through the Hub.
+
+## Prerequisites
+
+- [Pinix installed and running](/getting-started/quick-start/)
+- [Bun](https://bun.sh) (installed automatically with Pinix)
+
+## Scaffold a new Clip
+
+<Steps>
+
+1. **Create the project**
+
+   ```bash
+   mkdir my-clip && cd my-clip
+   bun init -y
+   bun add @pinixai/core
+   ```
+
+2. **Create `clip.json`**
+
+   ```json
+   {
+     "name": "@yourscope/my-clip",
+     "version": "0.1.0",
+     "description": "My first Clip",
+     "main": "src/index.ts"
+   }
+   ```
+
+3. **Write the Clip**
+
+   Create `src/index.ts`:
+
+   ```typescript
+   import { Clip, command } from "@pinixai/core";
+
+   const clip = new Clip({
+     name: "@yourscope/my-clip",
+     description: "My first Clip",
+   });
+
+   clip.command("hello", {
+     description: "Say hello",
+     input: {
+       name: { type: "string", description: "Name to greet", required: true },
+     },
+     handler: async ({ input }) => {
+       return { message: `Hello, ${input.name}!` };
+     },
+   });
+
+   clip.run();
+   ```
+
+4. **Test locally**
+
+   ```bash
+   # Install as a local Clip
+   pinix hub add local/my-clip --path .
+
+   # Invoke it
+   pinix invoke my-clip hello --name "World"
+   # → { "message": "Hello, World!" }
+   ```
+
+5. **Iterate**
+
+   Edit `src/index.ts`, the Runtime auto-restarts the Clip process. Invoke again to test changes.
+
+</Steps>
+
+## Clip structure
+
+A minimal Clip project:
+
+```
+my-clip/
+├── clip.json          # Package manifest
+├── src/
+│   └── index.ts       # Entry point
+├── package.json       # Dependencies
+└── web/               # Optional: Web UI
+    └── index.html
+```
+
+### `clip.json` fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Package identifier: `@scope/name` |
+| `version` | Yes | Semver version |
+| `description` | Yes | What this Clip does |
+| `main` | Yes | Entry point relative to package root |
+| `dependencies` | No | Clip-to-Clip dependencies (slots) |
+
+## Adding more commands
+
+```typescript
+clip.command("list", {
+  description: "List all items",
+  handler: async () => {
+    const items = await db.getAll();
+    return { items, total: items.length };
+  },
+});
+
+clip.command("add", {
+  description: "Add a new item",
+  input: {
+    title: { type: "string", required: true },
+    priority: { type: "string", enum: ["low", "medium", "high"] },
+  },
+  handler: async ({ input }) => {
+    const item = await db.create(input);
+    return item;
+  },
+});
+```
+
+<Aside type="tip">
+  Follow the [command design principles](/clip-development/command-design/) — they're designed for Agent consumption. Separate list operations from detail operations, return structured data, keep commands stateless.
+</Aside>
+
+## Cross-Clip invocation
+
+Your Clip can invoke other Clips through the Hub:
+
+```typescript
+import { invoke } from "@pinixai/core";
+
+clip.command("research", {
+  description: "Research a topic using search and browser",
+  input: {
+    topic: { type: "string", required: true },
+  },
+  handler: async ({ input }) => {
+    // Call another Clip
+    const results = await invoke("google", "search", {
+      query: input.topic,
+    });
+    return { results };
+  },
+});
+```
+
+The `invoke()` function sends the request through the Hub, which routes it to the target Clip. Your Clip doesn't need to know where the target Clip is running.
+
+## Adding a Web UI
+
+Create a `web/` directory in your Clip project with an `index.html`:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Clip</title>
+  <script type="module">
+    import { createClient } from "@pinixai/core/web";
+    const client = createClient();
+    // Use client.invoke() to call your Clip's commands
+  </script>
+</head>
+<body>
+  <!-- Your UI -->
+</body>
+</html>
+```
+
+The Web UI is served by the Hub and accessible through the Console at `/clips/<alias>/web`.
+
+## Next steps
+
+- [Design Principles](/clip-development/design-principles/) — how to design Clips for Agent consumption
+- [Command Design](/clip-development/command-design/) — detailed command design patterns
+- [Publishing](/clip-development/publishing/) — publish to the Registry

@@ -1,0 +1,113 @@
+---
+title: Building an Edge Clip
+description: "How to build an Edge Clip that connects to the Hub via the Provider protocol."
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+An Edge Clip is a standalone service that implements the [Provider protocol](/edge-clips/provider-protocol/) to register Clips with the Hub. Unlike SDK Clips (which are managed by the Runtime), Edge Clips manage their own lifecycle.
+
+## When to build an Edge Clip
+
+Build an Edge Clip when your capability:
+
+- Requires **native system access** (hardware, OS APIs)
+- Needs a **long-running process** (daemon, browser instance)
+- Can't run in a Bun/TypeScript sandbox
+- Needs **direct control** over its own process lifecycle
+
+If your Clip is a standard API wrapper or data processing tool, use the [SDK approach](/clip-development/getting-started/) instead — it's simpler.
+
+## Minimal implementation
+
+<Steps>
+
+1. **Connect to the Hub**
+
+   Establish a ProviderStream connection to the Hub's Connect-RPC endpoint:
+
+   ```
+   POST /pinix.hub.v1.HubService/ProviderStream
+   Content-Type: application/connect+proto
+   Authorization: Bearer <hub-token>
+   ```
+
+   This is a bidirectional stream. Use your language's gRPC/Connect-RPC client library.
+
+2. **Register your Clips**
+
+   Send a `RegisterClips` message with your Clip definitions:
+
+   ```json
+   {
+     "type": "RegisterClips",
+     "clips": [{
+       "package": "my-edge-clip",
+       "commands": [{
+         "name": "status",
+         "description": "Get device status",
+         "input": {}
+       }]
+     }]
+   }
+   ```
+
+3. **Handle invocations**
+
+   Listen for `InvokeRequest` messages and respond:
+
+   ```json
+   // Receive
+   { "type": "InvokeRequest", "requestId": "r1", "command": "status" }
+
+   // Respond
+   { "type": "InvokeResponse", "requestId": "r1", "output": { "status": "online" } }
+   ```
+
+4. **Respond to heartbeats**
+
+   When you receive a `Heartbeat`, send one back immediately.
+
+</Steps>
+
+## Implementation checklist
+
+- [ ] Connect to Hub via ProviderStream
+- [ ] Register Clips with commands and schemas
+- [ ] Handle `InvokeRequest` → return `InvokeResponse`
+- [ ] Respond to heartbeats within timeout
+- [ ] Auto-reconnect with exponential backoff on disconnect
+- [ ] Graceful shutdown (unregister Clips, close stream)
+- [ ] Log all state transitions (connect, disconnect, error, reconnect)
+
+<Aside type="caution">
+  **Never exit on network errors.** Your Edge Clip must automatically reconnect when the ProviderStream disconnects. Use exponential backoff (1s, 2s, 4s, 8s, ... capped at 30s).
+</Aside>
+
+## Reference implementation
+
+[BB-Browser](https://github.com/epiral/bb-browser) (`bb-browser-daemon`) is the reference Edge Clip implementation. It:
+
+- Connects to the Hub as a Provider
+- Registers 100+ platform adapters as Clips
+- Manages a Chrome instance for browser automation
+- Handles heartbeats and reconnection
+- Supports both local Hub and Cloud Hub connections
+
+Study its `daemon/` directory for a complete, production-tested Edge Clip.
+
+## Verification
+
+After starting your Edge Clip:
+
+```bash
+# Check it registered with the Hub
+pinix hub list
+# Should show your Edge Clip's commands
+
+# Invoke a command
+pinix invoke my-edge-clip status
+
+# Check Hub logs for the registration
+cat ~/.pinix/logs/pinixd.log | grep "my-edge-clip"
+```

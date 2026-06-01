@@ -1,0 +1,112 @@
+---
+title: Clips vs MCP vs GPTs
+description: "How Pinix Clips compare to MCP Tools and OpenAI GPTs — and why the differences matter."
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Pinix Clips, MCP Tools, and OpenAI GPTs all aim to extend AI Agent capabilities. They make different trade-offs.
+
+## Comparison table
+
+| | Clip | MCP Tool | GPTs |
+|---|---|---|---|
+| **Knowledge Layer** | Manifest (patterns, entities, schema) | Tool description (plain text) | System prompt |
+| **Capability Layer** | Full execution logic | Function call | Limited (Actions) |
+| **Composability** | Clip depends on Clip | Not supported | Not supported |
+| **Token efficiency** | Complex logic runs in Clip | Depends on implementation | Everything in model reasoning |
+| **Distribution** | Registry + `pinix hub add` | No standard distribution | GPT Store |
+| **Device capabilities** | Edge Clips bind to hardware | Requires extra implementation | Not supported |
+| **Discovery** | Structured manifest, auto-discovery | Tool list from server | User selects GPT |
+| **Cross-tool calls** | Clip invokes Clip via Hub | Not standardized | Not possible |
+| **Stateless invocation** | Yes (each call self-contained) | Server manages state | Session-based |
+| **Multi-protocol** | CLI / MCP / HTTP / Connect-RPC | MCP only | HTTP Actions only |
+
+## Key differences
+
+### 1. Structured knowledge vs plain text descriptions
+
+MCP Tools describe themselves with a text string. The Agent must infer when and how to use them from that description alone.
+
+Clips provide a **structured manifest** with typed schemas, pattern matching hints, and entity definitions. The Agent doesn't need to guess — the manifest is machine-readable.
+
+```json
+// MCP Tool: plain text
+{
+  "name": "search_twitter",
+  "description": "Search Twitter for tweets matching a query"
+}
+
+// Clip manifest: structured
+{
+  "commands": [{
+    "name": "search",
+    "description": "Search tweets",
+    "patterns": ["search twitter", "find tweets about"],
+    "input": {
+      "query": { "type": "string", "required": true },
+      "sort": { "type": "string", "enum": ["recent", "hot", "relevant"] }
+    }
+  }]
+}
+```
+
+### 2. Composability
+
+MCP Tools are isolated — one tool can't call another tool. If you need a workflow that combines search + browser + document creation, the Agent must orchestrate every step.
+
+Clips can **depend on other Clips**. A Twitter Clip declares a dependency on a Browser Clip. When the Twitter Clip needs to open a browser, it invokes the Browser Clip through the Hub — no Agent involvement needed.
+
+```
+MCP: Agent orchestrates everything
+  Agent → Tool A → Agent → Tool B → Agent → Tool C
+
+Clip: Clips compose internally
+  Agent → Clip A → (internally calls Clip B) → result
+```
+
+This means fewer round-trips, less token usage, and the Agent doesn't need to understand intermediate steps.
+
+### 3. Token efficiency
+
+With MCP, complex operations often require multiple back-and-forth exchanges between the Agent and the tool. Each round-trip consumes tokens.
+
+With Clips, complex logic runs inside the Clip. The Agent makes one call; the Clip handles the complexity internally. The Agent only sees the final result.
+
+### 4. Distribution and discovery
+
+MCP has no standard package registry. Each MCP server is configured manually in `claude_desktop_config.json` or equivalent.
+
+Clips have a **Registry** (`pinix hub add @scope/name`), a **Marketplace** (browse and install from the web), and **sharing** (expose your running Clips to other users). Discovery is built into the platform.
+
+### 5. Device capabilities
+
+MCP Tools don't have a standard way to access device hardware. You'd need to build a custom MCP server for each device capability.
+
+Pinix has **Edge Clips** — a first-class concept for device-bound capabilities. BB-Browser turns Chrome into 100+ commands. clip-dock-macos exposes screenshots, clipboard, and notifications. The Provider protocol makes any device capability installable.
+
+## When to use what
+
+| Use case | Best fit |
+|----------|---------|
+| Quick tool for Claude Desktop | MCP Tool |
+| Single-function API wrapper | MCP Tool |
+| Complex workflow with multiple tools | Clip |
+| Device/hardware integration | Edge Clip |
+| Reusable capability for any Agent | Clip |
+| Marketplace distribution | Clip |
+
+<Aside>
+  Pinix also **supports MCP** — you can expose all your Clips as MCP Tools for Claude Desktop, Cursor, or any MCP client. See [MCP Integration](/getting-started/mcp-integration/) for setup.
+</Aside>
+
+## Pinix is complementary, not competing
+
+Pinix doesn't replace MCP. It builds on top of the same idea (giving Agents tools) with additional layers:
+
+- **Structured knowledge** for better tool selection
+- **Composability** for complex workflows
+- **Distribution** for ecosystem growth
+- **Device abstraction** for real-world capabilities
+
+If you already use MCP Tools, you can expose them through Pinix's Hub and gain the benefits of the Clip ecosystem — routing, discovery, sharing, and cross-Clip composition.

@@ -1,0 +1,197 @@
+---
+title: Protocol Reference
+description: "Complete protocol specification for Pinix — Connect-RPC APIs, ProviderStream messages, IPC v2, and sequence diagrams."
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+This is the authoritative protocol reference for Pinix. It covers the Connect-RPC API, ProviderStream wire format, and IPC v2 protocol.
+
+## Connect-RPC API (HubService)
+
+All Hub communication uses [Connect-RPC](https://connectrpc.com/) (HTTP/2, Protocol Buffers). The Hub exposes these RPCs:
+
+| RPC | Type | Description |
+|-----|------|-------------|
+| `Invoke` | Unary | Invoke a Clip command |
+| `InvokeStream` | Server stream | Invoke with streaming response |
+| `ListClips` | Unary | List all registered Clips |
+| `GetClipManifest` | Unary | Get a Clip's full manifest |
+| `GetClipWeb` | Unary | Proxy Clip Web UI resources |
+| `AddClip` | Unary | Install a Clip from Registry |
+| `RemoveClip` | Unary | Uninstall a Clip |
+| `ProviderStream` | Bidirectional | Provider connection (registration + invoke forwarding) |
+| `RuntimeStream` | Bidirectional | Runtime lifecycle management |
+| `GetLogs` | Server stream | Stream Clip logs |
+| `HubInfo` | Unary | Hub metadata (version, mode) |
+| `DataRead` | Unary | Read Clip data |
+| `DataWrite` | Unary | Write Clip data |
+
+### Authentication
+
+Three token types:
+
+| Token | Scope | Use case |
+|-------|-------|----------|
+| **Hub Token** | User scope (`@username`) | CLI, Console, Cloud Hub |
+| **Clip Token** | Single Clip | Clip-to-Hub communication |
+| **Super Token** | Full access | Local development |
+
+Tokens are passed via `Authorization: Bearer <token>` header.
+
+## ProviderStream messages
+
+The ProviderStream is a bidirectional stream between a Provider and the Hub.
+
+### Provider → Hub
+
+```typescript
+type ProviderMessage =
+  | { type: "RegisterClips"; clips: ClipInfo[] }
+  | { type: "UnregisterClips"; aliases: string[] }
+  | { type: "InvokeResponse"; requestId: string; output: any }
+  | { type: "InvokeStreamChunk"; requestId: string; chunk: any }
+  | { type: "InvokeStreamEnd"; requestId: string }
+  | { type: "Heartbeat" }
+  | { type: "Log"; alias: string; level: string; message: string };
+```
+
+### Hub → Provider
+
+```typescript
+type HubMessage =
+  | { type: "ProviderHello"; sessionId: string }
+  | { type: "InvokeRequest"; requestId: string; alias: string; command: string; input: any }
+  | { type: "Heartbeat" }
+  | { type: "RuntimeInstall"; package: string; version: string }
+  | { type: "RuntimeUninstall"; alias: string };
+```
+
+### Request ID rules
+
+- Format: UUID v4
+- Unique per invocation
+- Used to match `InvokeRequest` → `InvokeResponse`
+- Must be included in all response and streaming messages
+
+## IPC v2 (NDJSON)
+
+Communication between the Runtime and SDK Clips uses NDJSON (newline-delimited JSON) over stdin/stdout.
+
+### Message format
+
+```json
+{"type":"invoke","id":"req-1","command":"list","input":{}}
+```
+
+One JSON object per line, terminated by `\n`.
+
+### Message types
+
+| Type | Direction | Purpose |
+|------|-----------|---------|
+| `invoke` | Runtime → Clip | Invoke a command |
+| `response` | Clip → Runtime | Command result |
+| `stream` | Clip → Runtime | Streaming chunk |
+| `stream_end` | Clip → Runtime | End of stream |
+| `invoke_clip` | Clip → Runtime | Cross-Clip invocation request |
+| `invoke_clip_response` | Runtime → Clip | Cross-Clip result |
+| `log` | Clip → Runtime | Structured log message |
+
+### Invoke flow
+
+```
+Runtime                              Clip (Bun process)
+   │                                      │
+   │─── {"type":"invoke","id":"r1",  ───►│
+   │     "command":"list","input":{}}     │
+   │                                      │
+   │◄── {"type":"response","id":"r1", ───│
+   │     "output":{"items":[...]}}        │
+   │                                      │
+```
+
+### Cross-Clip invoke flow
+
+```
+Runtime                Clip A                   Clip B
+   │                     │                        │
+   │── invoke ──────────►│                        │
+   │                     │                        │
+   │                     │── invoke_clip ────────►│ (via Runtime + Hub)
+   │                     │                        │
+   │                     │◄─ invoke_clip_response─│
+   │                     │                        │
+   │◄── response ───────│                        │
+```
+
+## Error codes
+
+| Code | Meaning |
+|------|---------|
+| `NOT_FOUND` | Clip or command not found |
+| `INVALID_ARGUMENT` | Missing or invalid input parameter |
+| `PERMISSION_DENIED` | Token doesn't have access |
+| `UNAVAILABLE` | Clip is offline or Provider disconnected |
+| `INTERNAL` | Clip handler threw an error |
+| `DEADLINE_EXCEEDED` | Invocation timed out |
+
+Errors are returned as structured objects:
+
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Clip 'my-clip' not found"
+  }
+}
+```
+
+## Sequence diagrams
+
+### Clip registration
+
+```
+Provider          Hub
+   │                │
+   │── ProviderStream (connect) ──►│
+   │◄── ProviderHello ────────────│
+   │                               │
+   │── RegisterClips ─────────────►│
+   │   [{package, alias, commands}]│
+   │                               │
+   │   Hub adds to routing table   │
+   │                               │
+```
+
+### Unary invocation
+
+```
+Client     Hub      Provider    Clip
+  │         │          │          │
+  │─Invoke─►│          │          │
+  │         │─InvokeReq►│         │
+  │         │          │─invoke──►│
+  │         │          │◄─response│
+  │         │◄InvokeRes─│         │
+  │◄─result─│          │          │
+```
+
+### Streaming invocation
+
+```
+Client     Hub      Provider    Clip
+  │         │          │          │
+  │─Stream─►│          │          │
+  │         │─InvokeReq►│         │
+  │         │          │─invoke──►│
+  │         │          │◄─stream──│  (chunk 1)
+  │         │◄StreamChk─│         │
+  │◄─chunk──│          │          │
+  │         │          │◄─stream──│  (chunk 2)
+  │         │◄StreamChk─│         │
+  │◄─chunk──│          │          │
+  │         │          │◄stream_end│
+  │         │◄StreamEnd─│         │
+  │◄─end────│          │          │
+```

@@ -1,0 +1,91 @@
+---
+title: Installation
+description: "Install Pinix on macOS or Linux in one command."
+---
+
+import { Aside, Tabs, TabItem, Steps } from "@astrojs/starlight/components";
+
+## System requirements
+
+| | Supported |
+|---|---|
+| **OS** | macOS, Linux |
+| **Architecture** | arm64 (Apple Silicon, ARM servers), amd64 (Intel/AMD) |
+| **Auto-installed** | Node.js, Bun, bb-browser, Chrome |
+
+<Aside>
+  Windows is not currently supported. Use [Docker](#docker) or WSL2 on Windows.
+</Aside>
+
+## One-line install
+
+```bash
+curl -fsSL dl.pinixai.com/install.sh | sh
+```
+
+This installs everything you need:
+
+| Component | Purpose |
+|-----------|---------|
+| `pinix` | CLI + daemon (single binary) |
+| Node.js | Runtime dependency (installed via fnm if missing) |
+| Bun | Clip runtime — runs TypeScript Clips |
+| bb-browser | Browser automation Edge Clip |
+
+Chrome is downloaded automatically on first `pinix start`.
+
+### CLI-only mode
+
+If you only want the CLI (no daemon, no browser), use:
+
+```bash
+curl -fsSL dl.pinixai.com/install.sh | sh -s -- --cli
+```
+
+This installs only the `pinix` binary for remote invocation against another Hub.
+
+## Docker
+
+For zero-configuration deployment:
+
+```bash
+docker run -d --shm-size=2g lueco/pinix <your-hub-token>
+```
+
+The Docker image includes pinix, Bun, Node.js, bb-browser, Chrome, and Xvfb. It starts the daemon and logs in automatically with the provided token.
+
+Get your Hub token from [pinixai.com/settings](https://pinixai.com/settings) after registration.
+
+## Build from source
+
+Requires Go 1.25+.
+
+```bash
+git clone https://github.com/epiral/pinix.git
+cd pinix
+make build
+```
+
+This produces the `pinix` binary in the current directory. You'll also need to install Bun and bb-browser separately:
+
+```bash
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
+
+# Install bb-browser
+npm install -g bb-browser
+```
+
+## Upgrading
+
+Pinix can upgrade itself:
+
+```bash
+pinix upgrade
+```
+
+This downloads the latest binary and updates bb-browser.
+
+## Next steps
+
+After installation, continue to [Quick Start](/getting-started/quick-start/) to start the daemon and begin using Clips.

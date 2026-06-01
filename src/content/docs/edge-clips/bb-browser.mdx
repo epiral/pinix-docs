@@ -1,0 +1,139 @@
+---
+title: BB-Browser
+description: "Your browser is the API — 36 platforms, 103 commands, zero API keys."
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+**BB-Browser** turns your web browser into a structured API. Instead of scraping HTML or reverse-engineering APIs, BB-Browser uses site-specific adapters that interact with websites like a human user — and return clean, structured data.
+
+## How it works
+
+BB-Browser controls a headed Chrome instance and exposes platform-specific commands through the Pinix Hub:
+
+```
+Agent / CLI
+    │
+    ▼
+Hub ──► bb-browser-daemon ──► Chrome
+            │                    │
+            │  site adapters     │  real browser
+            │  ├─ twitter        │  ├─ cookies
+            │  ├─ google         │  ├─ JS execution
+            │  ├─ hackernews     │  ├─ DOM interaction
+            │  └─ ...            │  └─ anti-detection
+            │                    │
+            └── structured data ◄┘
+```
+
+## Platform coverage
+
+BB-Browser ships with **36 platform adapters** and **103 commands**:
+
+| Category | Platforms |
+|----------|-----------|
+| **Search** | Google, Bing, DuckDuckGo |
+| **Social** | Twitter/X, Reddit, Xiaohongshu, Weibo |
+| **Tech** | HackerNews, GitHub, Stack Overflow, arXiv |
+| **Knowledge** | Wikipedia, Zhihu, Bilibili |
+| **Business** | Xueqiu (stocks), 12306 (trains), Amap (maps) |
+| **Media** | YouTube, Bilibili, Douyin |
+| **And more** | 20+ additional platforms |
+
+## Usage
+
+BB-Browser is automatically started by `pinix start`. Its commands appear in `pinix hub list`:
+
+```bash
+# Search Google
+pinix invoke google search "pinix ai agent"
+
+# Get HackerNews top stories
+pinix invoke hackernews top
+
+# Search Twitter
+pinix invoke twitter search "AI agents" --sort recent
+
+# Get stock quotes
+pinix invoke xueqiu quote "AAPL"
+```
+
+### Structured output
+
+All commands return structured JSON:
+
+```bash
+pinix invoke hackernews top --json
+```
+
+```json
+{
+  "items": [
+    {
+      "id": "12345",
+      "title": "Show HN: Pinix — Capability platform for AI Agents",
+      "url": "https://github.com/epiral/pinix",
+      "score": 342,
+      "author": "builder",
+      "comments": 128,
+      "time": "2h ago"
+    }
+  ]
+}
+```
+
+### JQ filtering
+
+Filter output on the command line:
+
+```bash
+pinix invoke hackernews top --jq '.items[:3].title'
+```
+
+## Authentication
+
+Some platforms require authentication (Twitter, Xiaohongshu, etc.). BB-Browser uses your existing browser cookies:
+
+1. Open Chrome (the one managed by bb-browser)
+2. Log in to the platform manually
+3. BB-Browser uses those cookies for subsequent commands
+
+Platforms that don't require login (HackerNews, Wikipedia, Google) work immediately.
+
+<Aside type="tip">
+  Chrome runs in **headed mode** (not headless) to avoid anti-automation detection. On macOS it renders offscreen; on Linux, Xvfb provides a virtual display.
+</Aside>
+
+## MCP integration
+
+BB-Browser works as a standalone MCP server too:
+
+```json
+{
+  "mcpServers": {
+    "bb-browser": {
+      "command": "bb-browser-daemon",
+      "args": ["--mcp"]
+    }
+  }
+}
+```
+
+Or use it through Pinix's Hub MCP to get all platforms alongside your other Clips.
+
+## Architecture
+
+BB-Browser has three components:
+
+| Component | Purpose |
+|-----------|---------|
+| `bb-browser` | CLI — for direct terminal use |
+| `bb-browser-daemon` | Edge Clip Provider — connects to Hub, manages Chrome |
+| `bb-viewer` | Stream viewer — for remote browser viewing (auto-downloaded) |
+
+The daemon manages the Chrome lifecycle and routes invocations to the appropriate site adapter.
+
+## Further reading
+
+- [BB-Browser on GitHub](https://github.com/epiral/bb-browser)
+- [Provider Protocol](/edge-clips/provider-protocol/) — how BB-Browser connects to the Hub

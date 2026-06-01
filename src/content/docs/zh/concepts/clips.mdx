@@ -1,0 +1,99 @@
+---
+title: "Clip —— Agent 的 App"
+description: "Clip 是 Pinix 的核心抽象：一个三合一的单元，将知识、能力和资产打包成可安装的能力。"
+---
+
+import { Aside, Card, CardGrid } from "@astrojs/starlight/components";
+
+**Clip** 是 Pinix 的核心抽象 —— 一个自包含的单元，将 *做什么*、*怎么做* 和 *如何组合* 打包成一个可安装的组件。
+
+你的手机靠 App 运行。你的 Agent 靠 Clip 运行。
+
+## 三层模型
+
+每个 Clip 是一个三合一：
+
+### 知识层（Knowledge Layer）
+
+方法论 —— Clip *能做什么*、*什么时候用*。
+
+Clip 的 **manifest** 告诉 Agent：
+- **我能做什么** —— 命令和匹配模式
+- **什么时候该用我** —— 匹配模式和实体
+- **怎么调用我** —— 带类型和校验的输入 schema
+
+Builder 的领域专长编码在知识层中。这降低了对 Agent 模型的要求 —— 它不需要弄清楚*如何*浏览 Twitter，只需要识别出用户想搜索 Twitter，然后调用正确的命令。
+
+### 能力层（Capability Layer）
+
+执行逻辑 —— 浏览器自动化、设备 API、业务流程。
+
+复杂逻辑在 Clip 里运行，不在模型的推理中。Agent 不需要知道*怎么做*，只需要知道*找谁*。
+
+### 资产层（Asset Layer）
+
+可组合、可复用、可沉淀 —— Clip 用 Clip，网络不断生长。
+
+Twitter Clip 可以依赖 Browser Clip。Research Clip 可以编排 Search + Twitter + Document Clip。你安装的 Clip 越多，可能的组合就越多。
+
+<Aside>
+  **More Clips, More Intelligence。** Clip 不是线性叠加 —— 它们相乘。五个 Clip 可以根据用户意图产生几十种不同的工作流。
+</Aside>
+
+## 三类 Clip
+
+| 类型 | 管理者 | 语言 | 安装方式 | 示例 |
+|------|--------|------|----------|------|
+| **SDK Clip** | Runtime | TypeScript | `pinix hub add` | @pinix/todo, @pinix/twitter |
+| **Edge Clip** | 自身（Provider） | 任意 | Provider 协议 | bb-browser, clip-dock-macos |
+| **Builtin Clip** | pinixd（进程内） | Go | 内置于守护进程 | agent, scheduler |
+
+### SDK Clip
+
+最常见的类型。用 TypeScript 和 `@pinixai/core` 编写，从 Registry 安装，由 Runtime 管理。当你执行 `pinix hub add @pinix/todo`，Runtime 下载包、启动 Bun 进程、注册到 Hub。
+
+### Edge Clip
+
+直接绑定硬件或 OS API。Browser Clip 控制 Chrome。macOS dock Clip 暴露截屏、剪贴板、通知。Edge Clip 自己实现 [Provider 协议](/zh/edge-clips/provider-protocol/)，作为独立服务连接 Hub。
+
+### Builtin Clip
+
+在 `pinixd` 进程内运行。目前有两个：
+- **agent** —— Go Agent Runtime（LLM 调用、工具循环、上下文管理）
+- **scheduler** —— 基于 cron 的任务调度
+
+## Clip 生命周期
+
+```
+安装 ──► 注册到 Hub ──► 可被调用
+                              │
+                    Agent/用户调用命令
+                              │
+                    Clip 执行，返回结果
+```
+
+## 示例：Clip 如何工作
+
+当用户说 *"搜一下推特上的 AI 新闻"*：
+
+```
+用户: "搜一下推特上的 AI 新闻"
+  │
+Agent 读取所有已安装 Clip 的 manifest
+  │
+Agent 匹配: twitter clip 有 search 命令
+  │
+Agent 构造: { command: "search", args: { query: "AI news" } }
+  │
+Hub 路由到 twitter clip
+  │
+twitter clip:
+  ├── 打开浏览器（通过 bb-browser 依赖）
+  ├── 导航到 Twitter 搜索
+  ├── 提取结果
+  └── 返回结构化数据
+  │
+Agent 格式化并展示结果给用户
+```
+
+Agent 从未碰过浏览器。从未解析 HTML。它只知道*找谁*和*问什么*。

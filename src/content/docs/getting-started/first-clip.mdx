@@ -1,0 +1,95 @@
+---
+title: Your First Clip
+description: "Install a Clip from the Registry, invoke it from the CLI, and see it in the Console."
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+With the daemon running and logged in, let's install and use your first Clip.
+
+<Steps>
+
+1. **Install a Clip**
+
+   ```bash
+   pinix hub add @pinix/todo
+   ```
+
+   This downloads the `@pinix/todo` Clip from the Registry and starts it locally. The Runtime manages its lifecycle — if it crashes, it restarts automatically.
+
+2. **List your Clips**
+
+   ```bash
+   pinix hub list
+   ```
+
+   You should see `todo` in the list alongside the bb-browser platform adapters (hackernews, google, twitter, etc.).
+
+3. **Use it**
+
+   ```bash
+   # Add a task
+   pinix invoke todo add "Read the Pinix docs"
+
+   # List tasks
+   pinix invoke todo list
+
+   # Complete a task
+   pinix invoke todo complete <task-id>
+   ```
+
+4. **See it in the Console**
+
+   Open [localhost:9000](http://localhost:9000) and navigate to **Clips**. You'll see your installed Clips with their status, commands, and Web UI (if available).
+
+</Steps>
+
+## Explore available Clips
+
+### From the CLI
+
+```bash
+# Search the Registry
+pinix registry search todo
+
+# See package details
+pinix registry info @pinix/todo
+```
+
+### From the Marketplace
+
+Open the Console and go to **Marketplace** to browse, search, and install Clips from other users.
+
+You can also visit the [Marketplace on pinixai.com](https://pinixai.com/marketplace) (requires login).
+
+## Discover command details
+
+Every Clip is self-documenting:
+
+```bash
+# See all commands of a Clip
+pinix invoke todo --help
+
+# See details of a specific command
+pinix invoke todo add --help
+```
+
+The `--help` output includes the command description, input parameters with types, and usage examples.
+
+<Aside type="tip">
+  When the Agent selects which Clip to use, it reads this same information from the Clip's manifest. Well-documented commands make the Agent more effective.
+</Aside>
+
+## Uninstall a Clip
+
+```bash
+pinix hub remove todo
+```
+
+The Clip process is stopped and the package is removed from the local installation.
+
+## Next steps
+
+- [Set up MCP integration](/getting-started/mcp-integration/) to use your Clips from Claude Desktop or Cursor
+- [Learn about Clip concepts](/concepts/clips/) to understand how Clips work
+- [Build your own Clip](/clip-development/getting-started/) if you want to create capabilities

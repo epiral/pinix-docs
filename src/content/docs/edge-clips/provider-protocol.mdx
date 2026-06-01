@@ -1,0 +1,122 @@
+---
+title: Provider Protocol
+description: "The ProviderStream protocol that connects Edge Clips and Runtimes to the Hub."
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The **ProviderStream** is a bidirectional streaming RPC that connects a Provider (Edge Clip or Runtime) to a Hub. It handles Clip registration, invocation forwarding, and health monitoring.
+
+## Connection lifecycle
+
+```
+Provider                                Hub
+   │                                     │
+   │──── ProviderStream (bidi) ────────►│
+   │                                     │
+   │◄─── ProviderHello ─────────────────│  Connection accepted
+   │                                     │
+   │──── RegisterClips ────────────────►│  Register available Clips
+   │                                     │
+   │◄─── InvokeRequest ────────────────│  Hub forwards invocations
+   │──── InvokeResponse ──────────────►│  Clip returns results
+   │                                     │
+   │◄─── Heartbeat ────────────────────│  Keep-alive (every 30s)
+   │──── Heartbeat ───────────────────►│
+   │                                     │
+```
+
+## Provider → Hub messages
+
+| Message | Purpose |
+|---------|---------|
+| `RegisterClips` | Register one or more Clips with the Hub |
+| `UnregisterClips` | Remove Clips from the Hub |
+| `InvokeResponse` | Return the result of an invocation |
+| `InvokeStreamChunk` | Send a streaming response chunk |
+| `InvokeStreamEnd` | End a streaming response |
+| `Heartbeat` | Response to Hub heartbeat |
+| `Log` | Forward Clip log output |
+
+## Hub → Provider messages
+
+| Message | Purpose |
+|---------|---------|
+| `ProviderHello` | Connection accepted, includes session ID |
+| `InvokeRequest` | Forward an invocation to a Clip |
+| `Heartbeat` | Keep-alive ping |
+| `RuntimeInstall` | (Runtime only) Install a Clip package |
+| `RuntimeUninstall` | (Runtime only) Remove a Clip package |
+
+## Registration
+
+When a Provider connects, it registers its Clips:
+
+```json
+{
+  "type": "RegisterClips",
+  "clips": [
+    {
+      "package": "bb-browser",
+      "alias": "browser",
+      "commands": [
+        {
+          "name": "navigate",
+          "description": "Navigate to a URL",
+          "input": { "url": { "type": "string", "required": true } }
+        }
+      ]
+    }
+  ]
+}
+```
+
+The Hub assigns aliases (or uses the suggested ones if available) and adds the Clips to its routing table.
+
+## Invocation
+
+When a client invokes a Clip, the Hub:
+
+1. Looks up the alias in the routing table
+2. Finds the Provider that registered it
+3. Sends an `InvokeRequest` through the ProviderStream
+4. The Provider delivers it to the Clip
+5. The response flows back through the same stream
+
+```json
+// Hub → Provider
+{
+  "type": "InvokeRequest",
+  "requestId": "req-abc123",
+  "alias": "browser",
+  "command": "navigate",
+  "input": { "url": "https://example.com" }
+}
+
+// Provider → Hub
+{
+  "type": "InvokeResponse",
+  "requestId": "req-abc123",
+  "output": { "title": "Example Domain", "url": "https://example.com" }
+}
+```
+
+## Heartbeat
+
+The Hub sends periodic heartbeat messages (default: every 30 seconds). The Provider must respond within the timeout window. If a Provider misses heartbeats, the Hub marks its Clips as offline and removes them from the routing table.
+
+<Aside type="caution">
+  **Reconnection is mandatory.** If the ProviderStream disconnects, the Provider must automatically reconnect with exponential backoff. `pinixd` never exits due to network errors — this is a design invariant.
+</Aside>
+
+## Authentication
+
+The ProviderStream requires a Hub Token for authentication. The token is obtained through `pinix login` and determines the Provider's scope.
+
+For local connections (same machine), a Super Token can be used for development.
+
+## Further reading
+
+- [Building an Edge Clip](/edge-clips/building-edge-clip/) — step-by-step guide
+- [Architecture](/platform/architecture/) — how Providers fit in the system
+- [Protocol Reference](/platform/protocol/) — complete protocol specification with sequence diagrams

@@ -1,0 +1,164 @@
+---
+title: Architecture
+description: "System architecture of Pinix — Hub, Runtime, Provider, and how they connect."
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Pinix's architecture has five roles: **Hub**, **Clip**, **Edge Clip**, **Provider**, and **Runtime**. The core principle: **Hub only sees Clips**.
+
+## System overview
+
+```
+                         ┌─────────────────────────────────────┐
+                         │            pinixd (:9000)            │
+                         │                                      │
+  CLI ─────────────────► │  ┌──────┐    ┌─────────┐            │
+  MCP ─────────────────► │  │ Hub  │◄──►│ Runtime │            │
+  Console ─────────────► │  │      │    │ (Provider)            │
+  Agent ─────────────────┤  │      │    │  ├─ todo (Bun)       │
+                         │  │      │    │  ├─ twitter (Bun)    │
+                         │  │      │    │  └─ ... (Bun)        │
+                         │  │      │    └─────────┘            │
+                         │  │      │                            │
+                         │  │      │◄── bb-browser (Edge Clip) │
+                         │  │      │     ├─ Chrome              │
+                         │  │      │     └─ site adapters       │
+                         │  │      │                            │
+                         │  │      │◄── Builtin Clips           │
+                         │  │      │     ├─ agent               │
+                         │  │      │     └─ scheduler           │
+                         │  └──────┘                            │
+                         └─────────────────────────────────────┘
+                                │
+                                │ ProviderStream (optional)
+                                ▼
+                         ┌──────────────┐
+                         │  Cloud Hub   │
+                         │hub.pinixai.com│
+                         └──────────────┘
+```
+
+## Roles
+
+### Hub
+
+The **routing center**. All invocations flow through it.
+
+- Maintains a real-time routing table: alias → Provider
+- Routes invoke requests to the correct Clip
+- Manages alias assignment and conflict resolution
+- No type branches — everything is just a Clip
+
+### Runtime
+
+A special **Provider** that manages SDK Clips.
+
+- Downloads and installs Clip packages from the Registry
+- Starts/stops Bun processes for each Clip
+- Communicates with Clips via IPC v2 (NDJSON over stdin/stdout)
+- Handles crash recovery and automatic restarts
+- Registers managed Clips with the Hub
+
+### Provider
+
+The **connection protocol**. Any service that registers Clips with a Hub is a Provider.
+
+- Runtime is a Provider (manages many SDK Clips)
+- Edge Clips are Providers (manage themselves)
+- The ProviderStream is the bidirectional connection between a Provider and a Hub
+
+### Clip
+
+The **functional unit**. From the Hub's perspective, all Clips are identical — they have aliases and commands.
+
+### Edge Clip
+
+A Clip that **binds to hardware or OS APIs** and implements the Provider protocol itself.
+
+## Call chains
+
+### User → Clip
+
+```
+User ──► CLI/Console ──► Hub ──► Runtime ──► Bun process (Clip)
+                                    │
+                                    └─── IPC v2 (NDJSON)
+```
+
+### Clip → Clip (cross-invocation)
+
+```
+Clip A handler
+    │
+    └─ invoke("twitter", "search", { query: "AI" })
+         │
+         └─► Hub ──► Runtime ──► twitter Clip
+                                    │
+                          result ◄──┘
+```
+
+All cross-Clip invocations go through the Hub. Clips never communicate directly.
+
+### Cloud Hub connection
+
+```
+Local pinixd ──── ProviderStream ────► Cloud Hub
+   │                                       │
+   ├─ Local Clips visible in Cloud         │
+   │                                       │
+   └─ Cloud shared Clips available locally │
+```
+
+## IPC v2 protocol
+
+Runtime communicates with SDK Clips via **NDJSON** (newline-delimited JSON) over stdin/stdout:
+
+| Message type | Direction | Purpose |
+|-------------|-----------|---------|
+| `invoke` | Runtime → Clip | Invoke a command |
+| `response` | Clip → Runtime | Return result |
+| `stream` | Clip → Runtime | Streaming response chunk |
+| `stream_end` | Clip → Runtime | End streaming |
+| `invoke_clip` | Clip → Runtime | Cross-Clip invocation |
+| `invoke_clip_response` | Runtime → Clip | Cross-Clip result |
+| `log` | Clip → Runtime | Log output |
+
+## Running modes
+
+| Mode | Flag | Components | Use case |
+|------|------|-----------|----------|
+| **Full** | (default) | Hub + Runtime + Portal | Standard local setup |
+| **Hub-only** | `--hub-only` | Hub only | Dedicated routing server |
+| **Provider** | `--hub <url>` | Runtime only → remote Hub | Headless worker |
+
+## Configuration
+
+Configuration is stored in `~/.pinix/`:
+
+```
+~/.pinix/
+├── client.json          # Login token, Hub URL, user info
+├── clips/               # Installed SDK Clip packages
+│   └── @scope/
+│       └── name/
+├── data/                # Clip data storage
+│   ├── agent-go/        # Agent Runtime SQLite DB
+│   └── scheduler/       # Scheduler SQLite DB
+└── logs/
+    ├── pinixd.log       # Daemon JSON log
+    ├── bb-browserd-*.log
+    └── <alias>.log      # Per-Clip stderr
+```
+
+## Design invariants
+
+These rules are architectural laws — violating any one is a bug:
+
+1. **Hub is the only router.** All invocations go through Hub.
+2. **Bindings live on the Clip side**, not in the Hub.
+3. **Single Hub interface.** Local and Cloud Hub implement the same `HubServiceHandler`.
+4. **pinixd never exits on network errors.** Disconnected streams auto-reconnect with backoff.
+5. **All runtime state transitions must be logged.** Silent failures are bugs.
+
+See [Core Concepts](/concepts/) for the full list.

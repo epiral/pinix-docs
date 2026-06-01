@@ -1,0 +1,154 @@
+---
+title: Clip Web UI
+description: "Build a web interface for your Clip that runs inside the Pinix Console."
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Clips can include a web UI that runs inside the Pinix Console. This lets users interact with your Clip through a visual interface in addition to CLI and Agent invocation.
+
+## Architecture
+
+The Clip Web UI runs in an isolated context:
+
+```
+Console (pinixai.com / localhost:9000)
+  └── iframe: /<alias>/web/
+        └── Your Clip's web/ directory
+              └── Calls Clip commands via @pinixai/core/web
+```
+
+The Web UI communicates with the Clip through `@pinixai/core/web`, which connects to the Hub. The Console merely embeds and frames the Clip's Web UI — it doesn't own it.
+
+<Aside type="caution">
+  **`@pinixai/core/web` is the only way** for Clip Web UIs to invoke commands. Don't call HTTP endpoints directly — the Hub manages routing and authentication.
+</Aside>
+
+## Quick setup
+
+Create a `web/` directory in your Clip project:
+
+```
+my-clip/
+├── clip.json
+├── src/
+│   └── index.ts
+└── web/
+    ├── index.html
+    ├── src/
+    │   └── main.ts
+    └── package.json    # Optional: if using a build tool
+```
+
+### Minimal `web/index.html`
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>My Clip</title>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { createClient } from "@pinixai/core/web";
+
+    const client = createClient();
+
+    async function loadTasks() {
+      const result = await client.invoke("list");
+      document.getElementById("app").innerHTML = result.items
+        .map(item => `<div>${item.title} [${item.status}]</div>`)
+        .join("");
+    }
+
+    loadTasks();
+  </script>
+</body>
+</html>
+```
+
+### Using a framework
+
+You can use React, Vue, Svelte, or any framework. Set up a standard Vite project in the `web/` directory:
+
+```bash
+cd web
+bun create vite . --template react-ts
+bun add @pinixai/core
+```
+
+Configure `vite.config.ts` for Clip Web:
+
+```typescript
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig({
+  plugins: [react()],
+  base: "./",  // Important: relative paths for Hub serving
+  build: {
+    outDir: "dist",
+  },
+});
+```
+
+<Aside type="tip">
+  **Use `base: "./"` in your Vite config.** The Clip Web UI is served from a subpath (`/<alias>/web/`), so all asset paths must be relative.
+</Aside>
+
+## `@pinixai/core/web` API
+
+```typescript
+import { createClient } from "@pinixai/core/web";
+
+const client = createClient();
+
+// Invoke a command
+const result = await client.invoke("list");
+const task = await client.invoke("get", { id: "t1" });
+const created = await client.invoke("add", { title: "New task" });
+
+// Streaming invoke
+const stream = client.invokeStream("monitor");
+for await (const event of stream) {
+  console.log("Update:", event);
+}
+```
+
+## Trust model
+
+The Clip Web UI operates in a three-layer trust model:
+
+```
+Browser (untrusted)
+  │ @pinixai/core/web
+  ▼
+Hub (routing + auth)
+  │ IPC / ProviderStream
+  ▼
+Clip Runtime (trusted execution)
+```
+
+- The Web UI runs in the browser — it's untrusted
+- All invocations go through the Hub, which handles authentication
+- The Clip's handler runs server-side in the Runtime
+
+This means: **never put secrets in your Web UI code.** API keys, tokens, and sensitive logic belong in your Clip handler, not in the browser.
+
+## Development workflow
+
+1. **Start your Clip locally**: `pinix hub add local/my-clip --path .`
+2. **Access the Web UI**: Open `http://localhost:9000/clips/my-clip/web` in the Console
+3. **Iterate**: Edit `web/` files, refresh the browser to see changes
+4. **Build for production**: `cd web && bun run build` — the built assets in `web/dist/` are what gets published
+
+## Deployment notes
+
+When you `pinix registry publish`, the `web/` directory (or `web/dist/` if built) is included in the package. The Hub serves it automatically when users access the Clip's Web UI.
+
+Common pitfalls:
+- **Cookie/SameSite issues**: Cloud Hub serves Web UIs from `*.hub.pinix.ai` subdomains. Cookies must use `SameSite=None; Secure`.
+- **CORS**: All invocations go through `@pinixai/core/web` which handles CORS internally. Don't make direct HTTP requests to the Hub.
+- **MIME types**: Ensure your build outputs correct file extensions. The Hub serves files based on extension.

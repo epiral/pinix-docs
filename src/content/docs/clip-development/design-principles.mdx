@@ -1,0 +1,204 @@
+---
+title: Agent-Native Design Principles
+description: "First principles for designing Clips that AI Agents can use effectively — token economics, stateless operations, and action-ready responses."
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+When the primary consumer of your Clip is an LLM Agent, the design assumptions change fundamentally. This document derives Clip design principles from first principles.
+
+## Agent vs Human: Different constraints
+
+| Dimension | Human (CLI) | Agent (function call) |
+|-----------|------------|----------------------|
+| **Output** | Reads text, scans visually | Parses structured data, counts tokens |
+| **Cost bottleneck** | Latency (waiting) | Tokens (input + output) |
+| **Composition** | Pipes (`\|`), shell scripts | Function calls, parallel dispatch |
+| **State model** | Session, cwd, env vars | Stateless — every call is independent |
+| **Concurrency** | Sequential (one terminal) | Parallel function calls |
+| **Discovery** | `man`, `--help`, memory | Manifest, schema, auto-discovery |
+
+The most important difference: **tokens cost money and consume context window**. A verbose response that helps a human wastes tokens for an Agent.
+
+## Principle 1: Token economy
+
+Every byte of response costs tokens. Design for minimal, decision-ready output.
+
+### Index / Content separation
+
+**List operations** should return just enough to decide the next action:
+
+```typescript
+// Good: index response — minimal, decision-ready
+clip.command("list", {
+  handler: async () => ({
+    items: [
+      { id: "t1", title: "Buy groceries", status: "pending" },
+      { id: "t2", title: "Review PR #42", status: "done" },
+    ],
+    total: 2,
+  }),
+});
+
+// Bad: returns full details in list
+clip.command("list", {
+  handler: async () => ({
+    items: [
+      {
+        id: "t1", title: "Buy groceries", status: "pending",
+        description: "...", created_at: "...", updated_at: "...",
+        tags: [...], subtasks: [...], comments: [...]
+      },
+      // ...
+    ],
+  }),
+});
+```
+
+**Detail operations** return full information for a specific item:
+
+```typescript
+clip.command("get", {
+  input: { id: { type: "string", required: true } },
+  handler: async ({ input }) => {
+    // Full details — only when the Agent needs them
+    return await db.getById(input.id);
+  },
+});
+```
+
+This two-phase pattern (list → select → get) is the most token-efficient way to navigate data.
+
+## Principle 2: Stateless and parallel
+
+Every invocation must be self-contained. No sessions, no "current context," no implicit state.
+
+```typescript
+// Good: self-contained, ID-addressed
+clip.command("get", {
+  input: { id: { type: "string", required: true } },
+  handler: async ({ input }) => db.getById(input.id),
+});
+
+// Bad: depends on previous "select" call
+clip.command("get-current", {
+  handler: async () => db.getCurrent(), // What is "current"?
+});
+```
+
+**Why:** Agents can call multiple tools in parallel. If your Clip depends on ordering or state from a previous call, parallel execution breaks.
+
+**Lists are parallel dispatch points.** When an Agent gets a list of IDs, it can fetch details for all of them simultaneously:
+
+```
+Agent gets: [{ id: "a" }, { id: "b" }, { id: "c" }]
+Agent dispatches in parallel:
+  get(id="a") ──►
+  get(id="b") ──►  all at once
+  get(id="c") ──►
+```
+
+## Principle 3: Manifest-driven discovery
+
+Clips must be self-describing. The manifest should tell the Agent everything it needs to know to use the Clip correctly.
+
+Guidelines for command design:
+
+- **Verbs for commands**: `search`, `create`, `list`, `get`, `update`, `delete`
+- **Nouns for subcommand groups**: `message send`, `message list`
+- **No camelCase**: `get-details` not `getDetails`
+- **Merge when semantics overlap**: if `search` and `find` do the same thing, keep only one
+
+<Aside>
+  Aim for **fewer than 10 commands** per Clip. If you have more, consider splitting into multiple Clips or using command groups.
+</Aside>
+
+## Principle 4: Multi-protocol design
+
+A Clip runs across multiple protocols: CLI, IPC, HTTP, MCP, Connect-RPC. Design for the canonical form (space-separated commands), and let each protocol adapter handle translation.
+
+| Protocol | Command format |
+|----------|---------------|
+| CLI | `pinix invoke todo list` |
+| IPC / MCP | `{ command: "list" }` |
+| HTTP | `GET /todo/list` |
+
+Your command handler doesn't need to know which protocol is calling it — `@pinixai/core` handles the translation.
+
+## Four design patterns
+
+### 1. Two-phase interaction
+
+```
+Phase 1: List (index)  → Agent gets IDs + minimal info
+Phase 2: Get  (detail) → Agent fetches full details for selected items
+```
+
+### 2. Action-ready response
+
+Responses should include everything needed for the next action:
+
+```typescript
+// Good: includes IDs for follow-up actions
+{
+  items: [
+    { id: "t1", title: "...", status: "pending" }
+    //   ^^^ Agent can use this to call complete(id="t1")
+  ]
+}
+
+// Bad: Agent has to make another call to get actionable IDs
+{
+  items: [
+    { title: "...", status: "pending" }
+    // No ID — Agent can't do anything with this
+  ]
+}
+```
+
+### 3. Single-responsibility writes
+
+Each write command does one thing:
+
+```typescript
+// Good: separate commands
+clip.command("update-title", { ... });
+clip.command("update-status", { ... });
+clip.command("add-tag", { ... });
+
+// Bad: one command tries to do everything
+clip.command("update", {
+  input: {
+    title: { type: "string" },    // which fields
+    status: { type: "string" },   // are being
+    tags: { type: "array" },      // updated?
+  },
+});
+```
+
+### 4. Mutation returns affected entity
+
+After a write, return the updated entity so the Agent doesn't need a separate fetch:
+
+```typescript
+clip.command("complete", {
+  input: { id: { type: "string", required: true } },
+  handler: async ({ input }) => {
+    const task = await db.complete(input.id);
+    return task; // Return the updated task, not just { success: true }
+  },
+});
+```
+
+## Design checklist
+
+Before publishing your Clip, verify:
+
+- [ ] List operations return index-level data (IDs, titles, status)
+- [ ] Detail operations are ID-addressed and self-contained
+- [ ] Every response includes IDs for follow-up actions
+- [ ] No implicit state between commands
+- [ ] Write operations return the affected entity
+- [ ] Command count is under 10 (or uses command groups)
+- [ ] All input parameters have types and descriptions
+- [ ] Commands work correctly via CLI, IPC, and MCP

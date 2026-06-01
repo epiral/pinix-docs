@@ -1,0 +1,96 @@
+---
+title: Hub & Routing
+description: "The Hub is Pinix's single routing center — all Clips register here, all invocations flow through here."
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The **Hub** is the routing center of Pinix. Every Clip registers with a Hub, and every invocation flows through it.
+
+## Design principle: Hub only sees Clips
+
+The Hub has one job: route invocations to the right Clip. It doesn't care how a Clip is implemented — TypeScript SDK Clip, Go builtin, native Edge Clip, remote Provider. To the Hub, they're all just Clips with commands.
+
+```
+                    ┌─────────────────────────────────┐
+                    │              Hub                 │
+                    │                                  │
+CLI ──────────►     │   Routing Table                  │
+MCP ──────────►     │   ┌──────────┬────────────────┐  │
+Portal ───────►     │   │ Alias    │ Provider       │  │
+Agent ────────►     │   ├──────────┼────────────────┤  │
+                    │   │ todo     │ runtime://local │  │
+                    │   │ twitter  │ runtime://local │  │
+                    │   │ browser  │ provider://bb   │  │
+                    │   │ agent    │ builtin://agent │  │
+                    │   └──────────┴────────────────┘  │
+                    └─────────────────────────────────┘
+```
+
+No type branches. No special cases. The Hub maintains a **real-time routing table** mapping aliases to Providers.
+
+## Aliases
+
+Every Clip on a Hub has a unique **alias**. When you install a Clip:
+
+```bash
+pinix hub add @pinix/todo
+# Alias: todo
+
+pinix hub add @pinix/todo --alias my-tasks
+# Alias: my-tasks
+```
+
+The alias is the invocation handle — `pinix invoke todo list` routes via the `todo` alias. If you don't specify one, it's auto-generated from the package name.
+
+## Local Hub vs Cloud Hub
+
+Pinix runs a Hub locally on your machine (`pinixd` on port 9000). This is your **local Hub** — it manages your installed Clips and routes local invocations.
+
+When you `pinix login`, your local Hub connects to the **Cloud Hub** (`hub.pinixai.com`). Your local Clips become accessible from the cloud, and you can use shared Clips from other users.
+
+```
+┌──────────────────┐         ┌──────────────────┐
+│   Your Machine   │         │    Cloud Hub      │
+│                  │         │                   │
+│  Local Hub :9000 │────────►│  hub.pinixai.com  │
+│  ├─ todo         │ Provider│  ├─ @you/todo     │
+│  ├─ twitter      │ Stream  │  ├─ @you/twitter  │
+│  └─ browser      │         │  └─ @other/...    │
+└──────────────────┘         └──────────────────┘
+```
+
+<Aside type="tip">
+  Both local and Cloud Hub implement the **same interface** (`HubServiceHandler`). The protocol is identical — the difference is scope and reach.
+</Aside>
+
+## Invocation flow
+
+When you invoke a Clip:
+
+1. **Client** (CLI / MCP / Portal / Agent) sends an invoke request to the Hub
+2. **Hub** looks up the alias in its routing table
+3. **Hub** forwards the request to the correct Provider
+4. **Provider** delivers it to the Clip process
+5. **Clip** executes and returns a response
+6. **Response** flows back through the same chain
+
+```
+Client → Hub → Provider → Clip
+                              │
+Client ← Hub ← Provider ← Clip
+```
+
+For cross-Clip invocation (a Clip calling another Clip), the same flow applies — the calling Clip sends an invoke to the Hub, which routes it to the target Clip. Everything goes through the Hub.
+
+## Running modes
+
+`pinixd` supports multiple configurations:
+
+| Mode | What it runs | Use case |
+|------|-------------|----------|
+| **Full** (default) | Hub + Runtime + Portal | Standard local setup |
+| **Hub-only** | Hub only | Dedicated routing server |
+| **Provider** | Runtime only, connects to remote Hub | Headless Clip worker |
+
+Most users run the full mode with `pinix start`. The other modes are for advanced deployment scenarios.

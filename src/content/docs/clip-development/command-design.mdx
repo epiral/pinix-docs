@@ -1,0 +1,213 @@
+---
+title: Command Design
+description: "Detailed guide for designing Clip commands — naming, grouping, input schemas, and response patterns."
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Commands are the interface between Agents and your Clip. Good command design makes your Clip more discoverable, more efficient, and easier to use.
+
+## Naming conventions
+
+### Commands use verbs
+
+```
+list, get, search, create, add, update, delete, complete, send, read
+```
+
+### Command groups use nouns
+
+When a Clip has multiple resource types, group related commands under nouns:
+
+```typescript
+// Command groups
+clip.commandGroup("message", {
+  description: "Manage messages",
+});
+
+clip.command("message send", { ... });
+clip.command("message list", { ... });
+clip.command("message read", { ... });
+
+clip.commandGroup("channel", {
+  description: "Manage channels",
+});
+
+clip.command("channel list", { ... });
+clip.command("channel create", { ... });
+```
+
+### Naming rules
+
+- Use lowercase with hyphens: `get-details`, not `getDetails`
+- Be specific: `search` not `find` (unless semantically different)
+- Avoid redundancy: `list` not `list-items` (the Clip name provides context)
+- Use standard CRUD verbs when applicable
+
+<Aside type="tip">
+  **Merge when semantics overlap.** If `search` and `find` do the same thing, keep only one. Every command adds to the Agent's decision space — fewer commands mean faster, more accurate selection.
+</Aside>
+
+## Input schema design
+
+### Be explicit about types
+
+```typescript
+clip.command("search", {
+  input: {
+    query: {
+      type: "string",
+      description: "Search query",
+      required: true,
+    },
+    limit: {
+      type: "number",
+      description: "Maximum number of results",
+      default: 10,
+    },
+    sort: {
+      type: "string",
+      description: "Sort order",
+      enum: ["recent", "relevant", "popular"],
+      default: "relevant",
+    },
+  },
+  handler: async ({ input }) => { ... },
+});
+```
+
+Every parameter should have:
+- **type** — `string`, `number`, `boolean`, `array`, `object`
+- **description** — what it does (Agents read this)
+- **required** — whether the Agent must provide it
+- **enum** — valid values when applicable
+- **default** — sensible defaults reduce Agent decisions
+
+### Avoid free-form objects
+
+```typescript
+// Bad: opaque object, Agent can't discover fields
+input: {
+  options: { type: "object" }
+}
+
+// Good: explicit fields
+input: {
+  sort: { type: "string", enum: ["asc", "desc"] },
+  limit: { type: "number", default: 10 },
+  offset: { type: "number", default: 0 },
+}
+```
+
+## Response design
+
+### Lists: minimal and actionable
+
+```typescript
+// Good list response
+{
+  items: [
+    { id: "p1", title: "Top AI papers this week", score: 342, comments: 128 },
+    { id: "p2", title: "Show HN: My new project", score: 89, comments: 24 },
+  ],
+  total: 2,
+  hasMore: false,
+}
+```
+
+Key properties of a good list response:
+- **ID** for every item (enables follow-up actions)
+- **Key fields** for decision-making (title, status, score)
+- **Pagination metadata** (`total`, `hasMore`, `nextCursor`)
+- **No nested objects** — keep it flat
+
+### Details: complete and structured
+
+```typescript
+// Good detail response
+{
+  id: "p1",
+  title: "Top AI papers this week",
+  url: "https://...",
+  author: "dang",
+  score: 342,
+  comments: 128,
+  created: "2026-05-30T10:00:00Z",
+  content: "Full text content...",
+  topComments: [
+    { id: "c1", author: "user1", text: "Great summary", score: 42 },
+  ],
+}
+```
+
+### Mutations: return the affected entity
+
+```typescript
+// Good: returns what changed
+clip.command("complete", {
+  handler: async ({ input }) => {
+    const task = await db.complete(input.id);
+    return task; // The full updated task
+  },
+});
+
+// Bad: returns nothing useful
+clip.command("complete", {
+  handler: async ({ input }) => {
+    await db.complete(input.id);
+    return { success: true }; // Agent has to fetch again to see the result
+  },
+});
+```
+
+## Streaming output
+
+For long-running operations, use streaming:
+
+```typescript
+clip.command("monitor", {
+  description: "Monitor a feed in real-time",
+  streaming: true,
+  handler: async function* ({ input }) {
+    while (true) {
+      const update = await feed.poll();
+      if (update) {
+        yield update;
+      }
+      await sleep(5000);
+    }
+  },
+});
+```
+
+Streaming commands are invoked with `pinix invoke <alias> <command> --stream` or via the streaming invoke RPC.
+
+## Stdin support
+
+Commands can accept large text input via stdin:
+
+```typescript
+clip.command("analyze", {
+  description: "Analyze text content",
+  stdin: true,
+  handler: async ({ input, stdin }) => {
+    // stdin contains the piped text
+    const analysis = await analyze(stdin);
+    return analysis;
+  },
+});
+```
+
+```bash
+cat article.txt | pinix invoke my-clip analyze
+```
+
+## Command count guidelines
+
+| Commands | Recommendation |
+|----------|---------------|
+| 1-5 | Ideal for a focused Clip |
+| 6-10 | Use command groups for organization |
+| 10+ | Consider splitting into multiple Clips |
+
+The Agent's effectiveness drops as the number of choices increases. A Clip with 3 well-designed commands is better than one with 15 overlapping ones.

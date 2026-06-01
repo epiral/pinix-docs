@@ -1,0 +1,79 @@
+---
+title: Quick Start
+description: "Start the daemon, log in, and make your first Clip invocation in under 60 seconds."
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+After [installing Pinix](/getting-started/installation/), you're three steps away from your first Clip invocation.
+
+<Steps>
+
+1. **Start the daemon**
+
+   ```bash
+   pinix start
+   ```
+
+   This starts `pinixd` on port 9000. It automatically launches Chrome and bb-browser in the background.
+
+   You should see:
+   ```
+   Pinix started on :9000 (PID 12345)
+   ```
+
+2. **Log in**
+
+   ```bash
+   pinix login
+   ```
+
+   This opens a browser window for device code authorization. Follow the on-screen instructions to log in with your Pinix account.
+
+   <Aside type="tip">
+     Don't have an account? Register at [pinixai.com/register](https://pinixai.com/register). Alternatively, use a token: `pinix login --token pnx_...` (get it from [pinixai.com/settings](https://pinixai.com/settings)).
+   </Aside>
+
+   After login, pinixd automatically restarts to connect to the Cloud Hub. Your local Clips become accessible from the cloud.
+
+3. **Open the Console**
+
+   ```bash
+   open http://localhost:9000
+   ```
+
+   The Console is your web UI for managing Clips, chatting with the Agent, and browsing the Marketplace.
+
+</Steps>
+
+## Try it out
+
+Once started, you can invoke browser-based Clips immediately (bb-browser registers its platform adapters on start):
+
+```bash
+# See what Clips are available
+pinix hub list
+
+# Search HackerNews
+pinix invoke hackernews top
+
+# Search Google
+pinix invoke google search "pinix ai agent"
+```
+
+## Useful commands
+
+| Command | Description |
+|---------|-------------|
+| `pinix start` | Start the daemon |
+| `pinix stop` | Stop the daemon |
+| `pinix hub list` | List installed Clips |
+| `pinix hub add @scope/name` | Install a Clip |
+| `pinix invoke <alias> <command>` | Invoke a Clip command |
+| `pinix upgrade` | Upgrade Pinix |
+| `pinix whoami` | Check login status |
+
+## Next steps
+
+- [Install your first Clip](/getting-started/first-clip/) from the Registry
+- [Set up MCP integration](/getting-started/mcp-integration/) with Claude Desktop or Cursor

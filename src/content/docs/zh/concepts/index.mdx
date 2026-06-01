@@ -1,0 +1,55 @@
+---
+title: 核心概念
+description: "理解 Pinix 背后的五个关键概念 —— 以及它们如何协作赋予 AI Agent 真实世界的能力。"
+---
+
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+
+Pinix 让 AI Agent 能使用任何设备的任何能力。你不需要为每个 Agent 搭建复杂的工具链，只需安装 **Clip** —— 自包含的能力单元，任何 Agent 都可以通过 **Hub** 发现和调用它们。
+
+理解以下五个概念，你就理解了 Pinix。
+
+## 架构概览
+
+```
+User ──► Agent ──► Hub ──────► Clip (SDK)
+                    │             ↑
+                    │          Runtime (管理生命周期)
+                    │
+                    └────────► Clip (Edge)
+                                 ↑
+                              Provider 协议
+                              (bb-browser, clip-dock, ...)
+```
+
+**Agent** 理解用户想做什么。**Hub** 将请求路由到正确的 **Clip**。Clip 执行实际工作 —— 无论是搜索 Twitter、管理待办事项，还是控制浏览器。
+
+**SDK Clip** 是由 Runtime 管理的 TypeScript 包。**Edge Clip** 通过 Provider 协议直接绑定硬件或 OS API。
+
+<CardGrid>
+  <LinkCard
+    title="Clip"
+    description="核心抽象：知识 + 能力 + 资产，三合一。"
+    href="/zh/concepts/clips/"
+  />
+  <LinkCard
+    title="Hub 与路由"
+    description="连接 Agent 和 Clip 的唯一路由器。"
+    href="/zh/concepts/hub-and-routing/"
+  />
+  <LinkCard
+    title="Provider 与 Edge Clip"
+    description="设备如何向 Agent 暴露能力。"
+    href="/zh/concepts/providers-and-edge/"
+  />
+  <LinkCard
+    title="Agent 与 Clip"
+    description="Agent 薄，Clip 厚 —— 为什么这改变了一切。"
+    href="/zh/concepts/agent-and-clips/"
+  />
+  <LinkCard
+    title="Clip vs MCP vs GPTs"
+    description="Clip 与其他工具框架的对比。"
+    href="/zh/concepts/clips-vs-mcp/"
+  />
+</CardGrid>

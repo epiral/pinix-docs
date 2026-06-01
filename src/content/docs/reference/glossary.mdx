@@ -1,0 +1,33 @@
+---
+title: Glossary
+description: "Definitions of key terms in the Pinix ecosystem."
+---
+
+| Term | Definition | Not |
+|------|-----------|-----|
+| **Clip** | Capability unit, identified by (hub, alias). Contains Knowledge (manifest) + Capability (execution logic) + Asset (composable) | Not a plugin, not an MCP tool |
+| **SDK Clip** | Clip managed by the Runtime, written in TypeScript, installed via `pinix hub add` | Not an Edge Clip |
+| **Edge Clip** | Clip that binds to hardware/OS APIs, implements the Provider protocol itself | Not an SDK Clip |
+| **Builtin Clip** | Clip running inside the `pinixd` process (Go), registered via `builtin.Registry` | Not an SDK Clip, no IPC |
+| **Hub** | Routing center — manages alias assignment and invoke routing. Single source of truth | Does not manage Clip lifecycles |
+| **Provider** | Connection protocol (ProviderStream) — registers Clips and forwards invocations | Not the same as Runtime |
+| **Runtime** | Lifecycle manager (RuntimeStream) — installs, starts, stops SDK Clips | Not a Provider (though it acts as one), does not route |
+| **Alias** | Hub-assigned unique identifier for a Clip. Format: `{name}-{4hex}` or user-specified via `--alias` | Not the package name |
+| **Package** | Publishing identifier for a Clip: `@scope/name` format | Not the alias |
+| **Scope** | Owner identity carried by tokens (`@cp`, `@pinixai`). Determines Clip visibility | Not a tenant |
+| **Slot** | Dependency declaration — a logical name mapped to a package constraint | Not a binding |
+| **Binding** | Clip-side mapping of slot → alias (stored in `bindings.json`) | Does not exist on the Hub side |
+| **Manifest** | Machine-readable Clip description: commands, patterns, entities, input schemas | Not just a description string |
+| **Portal / Console** | Web UI for managing Clips, chatting with Agent, browsing Marketplace | Not an Agent Runtime, does not run LLM |
+| **Agent Runtime** | LLM execution engine (Go). Local: builtin Clip `agent` in pinixd. Cloud: pinix-api `/ai/*` | Not a Clip (conceptually), though registered as one |
+| **Scheduler** | Cron-based task scheduler, builtin Clip in pinixd | Not a separate service |
+| **Registry** | Package repository for Clips. Publish with `pinix registry publish`, install with `pinix hub add` | Not npm |
+| **Marketplace** | Discovery platform for shared Clips (running instances, not code packages) | Not the same as Registry |
+| **SharedClip** | A user's running Clip instance exposed to other users via Cloud Hub. Has access modes: public, unlisted, private, token | Not code distribution |
+| **Subscription** | A user's opt-in to access a SharedClip. Required before the SharedClip appears in their Clips list | Not automatic |
+| **Credit** | Platform currency. 1 credit = 0.001 CNY. Used for cloud Agent conversations and shared Clip invocations | Not real currency, not withdrawable |
+| **BB-Browser** | Browser automation Edge Clip. Turns Chrome into a structured API with 36 platform adapters | Not a scraper |
+| **clip-dock** | Device capability pack — installs on a device to expose all its capabilities as Edge Clips | Not a Portal |
+| **IPC v2** | NDJSON protocol (stdin/stdout) between Runtime and SDK Clips | Not HTTP |
+| **ProviderStream** | Bidirectional Connect-RPC stream between a Provider and a Hub | Not REST |
+| **Connect-RPC** | HTTP/2 + Protocol Buffers RPC framework used for all Hub communication | Not gRPC (similar but HTTP-native) |

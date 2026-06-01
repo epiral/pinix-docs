@@ -1,0 +1,96 @@
+---
+title: Pinix Documentation
+description: "Pinix — the capability platform for AI Agents. Install Clips, extend Agent abilities, build and share capabilities."
+template: splash
+hero:
+  tagline: "The capability platform for AI Agents. More Clips, More Intelligence."
+  actions:
+    - text: Quick Start
+      link: /getting-started/installation/
+      icon: right-arrow
+      variant: primary
+    - text: Core Concepts
+      link: /concepts/
+      icon: open-book
+    - text: GitHub
+      link: https://github.com/epiral/pinix
+      icon: github
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+
+## Get started
+
+<CardGrid>
+  <LinkCard
+    title="Install Pinix"
+    description="One command installs everything. macOS and Linux."
+    href="/getting-started/installation/"
+  />
+  <LinkCard
+    title="Quick Start"
+    description="Start the daemon, log in, and invoke your first Clip in 60 seconds."
+    href="/getting-started/quick-start/"
+  />
+  <LinkCard
+    title="Your First Clip"
+    description="Install a Clip from the Registry and use it."
+    href="/getting-started/first-clip/"
+  />
+  <LinkCard
+    title="MCP Integration"
+    description="Use Clips in Claude Desktop, Cursor, and other MCP clients."
+    href="/getting-started/mcp-integration/"
+  />
+</CardGrid>
+
+## Understand the architecture
+
+<CardGrid>
+  <LinkCard
+    title="What is a Clip?"
+    description="Knowledge + Capability + Asset — the three-layer model."
+    href="/concepts/clips/"
+  />
+  <LinkCard
+    title="Hub & Routing"
+    description="How the Hub connects Agents to Clips."
+    href="/concepts/hub-and-routing/"
+  />
+  <LinkCard
+    title="Agent thin, Clip thick"
+    description="Why Pinix Agents work with mid-tier models."
+    href="/concepts/agent-and-clips/"
+  />
+  <LinkCard
+    title="Clips vs MCP vs GPTs"
+    description="Feature comparison with other tool frameworks."
+    href="/concepts/clips-vs-mcp/"
+  />
+</CardGrid>
+
+## Build capabilities
+
+<CardGrid>
+  <LinkCard
+    title="Build a Clip"
+    description="Create a Clip with @pinixai/core and test it locally."
+    href="/clip-development/getting-started/"
+  />
+  <LinkCard
+    title="Design Principles"
+    description="Agent-native design: token economy, stateless ops, action-ready responses."
+    href="/clip-development/design-principles/"
+  />
+  <LinkCard
+    title="BB-Browser"
+    description="36 platforms, 103 commands — your browser as an API."
+    href="/edge-clips/bb-browser/"
+  />
+  <LinkCard
+    title="Publish"
+    description="Share your Clip with the world via the Registry."
+    href="/clip-development/publishing/"
+  />
+</CardGrid>
