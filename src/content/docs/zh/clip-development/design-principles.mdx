@@ -1,8 +1,204 @@
 ---
-title: "Agent-Native Design Principles"
-description: "First principles for designing Clips that AI Agents can use effectively — token economics, stateless operations, and action-ready responses."
+title: Agent-Native 设计原则
+description: "设计 AI Agent 能高效使用的 Clip 的第一性原则 —— token 经济性、无状态操作和可直接行动的响应。"
 ---
 
-:::note
-This page is being translated to Chinese. Please refer to the [English version](/clip-development/design-principles/) for now.
-:::
+import { Aside } from "@astrojs/starlight/components";
+
+当你的 Clip 的主要使用者是 LLM Agent 时，设计假设会发生根本变化。本文从第一性原则推导 Clip 的设计原则。
+
+## Agent 与人类：不同约束
+
+| 维度 | 人类（CLI） | Agent（function call） |
+|-----------|------------|----------------------|
+| **输出** | 阅读文本，视觉扫描 | 解析结构化数据，计算 token |
+| **成本瓶颈** | 延迟（等待） | Token（输入 + 输出） |
+| **组合方式** | 管道（`\|`）、shell 脚本 | Function call、并行调度 |
+| **状态模型** | 会话、cwd、环境变量 | 无状态 —— 每次调用都是独立的 |
+| **并发** | 顺序执行（一个终端） | 并行 function call |
+| **发现方式** | `man`、`--help`、记忆 | Manifest、schema、自动发现 |
+
+最重要的差异是：**token 要花钱，也会占用上下文窗口**。对人类有帮助的冗长响应，对 Agent 来说是在浪费 token。
+
+## 原则 1：Token 经济性
+
+响应中的每个字节都会消耗 token。设计输出时，应追求最小化、可直接辅助决策。
+
+### Index / Content 分离
+
+**列表操作**应该只返回足够决定下一步行动的信息：
+
+```typescript
+// Good: index response — minimal, decision-ready
+clip.command("list", {
+  handler: async () => ({
+    items: [
+      { id: "t1", title: "Buy groceries", status: "pending" },
+      { id: "t2", title: "Review PR #42", status: "done" },
+    ],
+    total: 2,
+  }),
+});
+
+// Bad: returns full details in list
+clip.command("list", {
+  handler: async () => ({
+    items: [
+      {
+        id: "t1", title: "Buy groceries", status: "pending",
+        description: "...", created_at: "...", updated_at: "...",
+        tags: [...], subtasks: [...], comments: [...]
+      },
+      // ...
+    ],
+  }),
+});
+```
+
+**详情操作**为某个具体条目返回完整信息：
+
+```typescript
+clip.command("get", {
+  input: { id: { type: "string", required: true } },
+  handler: async ({ input }) => {
+    // Full details — only when the Agent needs them
+    return await db.getById(input.id);
+  },
+});
+```
+
+这种两阶段模式（list → select → get）是浏览数据时最节省 token 的方式。
+
+## 原则 2：无状态且可并行
+
+每次调用都必须自包含。不要依赖会话、不要有“当前上下文”、不要有隐式状态。
+
+```typescript
+// Good: self-contained, ID-addressed
+clip.command("get", {
+  input: { id: { type: "string", required: true } },
+  handler: async ({ input }) => db.getById(input.id),
+});
+
+// Bad: depends on previous "select" call
+clip.command("get-current", {
+  handler: async () => db.getCurrent(), // What is "current"?
+});
+```
+
+**原因：** Agent 可以并行调用多个工具。如果你的 Clip 依赖调用顺序或上一次调用留下的状态，并行执行就会出错。
+
+**列表是并行调度点。** 当 Agent 获得一组 ID 后，可以同时获取它们的详情：
+
+```
+Agent gets: [{ id: "a" }, { id: "b" }, { id: "c" }]
+Agent dispatches in parallel:
+  get(id="a") ──►
+  get(id="b") ──►  all at once
+  get(id="c") ──►
+```
+
+## 原则 3：Manifest 驱动的发现
+
+Clip 必须能自我描述。manifest 应该告诉 Agent 正确使用这个 Clip 所需的一切信息。
+
+命令设计指南：
+
+- **命令使用动词**：`search`、`create`、`list`、`get`、`update`、`delete`
+- **子命令分组使用名词**：`message send`、`message list`
+- **不要使用 camelCase**：用 `get-details`，不要用 `getDetails`
+- **语义重叠时合并**：如果 `search` 和 `find` 做的是同一件事，只保留一个
+
+<Aside>
+  每个 Clip 尽量控制在 **10 个命令以内**。如果超过这个数量，考虑拆分成多个 Clip，或使用命令分组。
+</Aside>
+
+## 原则 4：多协议设计
+
+一个 Clip 会跨多个协议运行：CLI、IPC、HTTP、MCP、Connect-RPC。面向规范形式（空格分隔的命令）设计，让每个协议适配器负责转换。
+
+| 协议 | 命令格式 |
+|----------|---------------|
+| CLI | `pinix invoke todo list` |
+| IPC / MCP | `{ command: "list" }` |
+| HTTP | `GET /todo/list` |
+
+你的命令 handler 不需要知道调用来自哪种协议 —— `@pinixai/core` 会处理转换。
+
+## 四种设计模式
+
+### 1. 两阶段交互
+
+```
+Phase 1: List (index)  → Agent gets IDs + minimal info
+Phase 2: Get  (detail) → Agent fetches full details for selected items
+```
+
+### 2. 可直接行动的响应
+
+响应应该包含下一步行动所需的一切：
+
+```typescript
+// Good: includes IDs for follow-up actions
+{
+  items: [
+    { id: "t1", title: "...", status: "pending" }
+    //   ^^^ Agent can use this to call complete(id="t1")
+  ]
+}
+
+// Bad: Agent has to make another call to get actionable IDs
+{
+  items: [
+    { title: "...", status: "pending" }
+    // No ID — Agent can't do anything with this
+  ]
+}
+```
+
+### 3. 单一职责的写操作
+
+每个写命令只做一件事：
+
+```typescript
+// Good: separate commands
+clip.command("update-title", { ... });
+clip.command("update-status", { ... });
+clip.command("add-tag", { ... });
+
+// Bad: one command tries to do everything
+clip.command("update", {
+  input: {
+    title: { type: "string" },    // which fields
+    status: { type: "string" },   // are being
+    tags: { type: "array" },      // updated?
+  },
+});
+```
+
+### 4. Mutation 返回受影响实体
+
+写入之后，返回更新后的实体，这样 Agent 不需要再额外获取一次：
+
+```typescript
+clip.command("complete", {
+  input: { id: { type: "string", required: true } },
+  handler: async ({ input }) => {
+    const task = await db.complete(input.id);
+    return task; // Return the updated task, not just { success: true }
+  },
+});
+```
+
+## 设计检查清单
+
+发布 Clip 前，请确认：
+
+- [ ] 列表操作返回 index 级数据（ID、标题、状态）
+- [ ] 详情操作通过 ID 定位，并且自包含
+- [ ] 每个响应都包含后续行动所需的 ID
+- [ ] 命令之间没有隐式状态
+- [ ] 写操作返回受影响实体
+- [ ] 命令数量少于 10 个（或使用命令分组）
+- [ ] 所有输入参数都有类型和描述
+- [ ] 命令可通过 CLI、IPC 和 MCP 正确工作

@@ -1,8 +1,33 @@
 ---
-title: "Glossary"
-description: "Definitions of key terms in the Pinix ecosystem."
+title: 术语表
+description: "Pinix 生态中关键术语的定义。"
 ---
 
-:::note
-This page is being translated to Chinese. Please refer to the [English version](/reference/glossary/) for now.
-:::
+| 术语 | 定义 | 不是什么 |
+|------|-----------|-----|
+| **Clip** | 能力单元，由 (hub, alias) 标识。包含 Knowledge（manifest）+ Capability（执行逻辑）+ Asset（可组合） | 不是 plugin，也不是 MCP tool |
+| **SDK Clip** | 由 Runtime 管理、使用 TypeScript 编写、通过 `pinix hub add` 安装的 Clip | 不是 Edge Clip |
+| **Edge Clip** | 绑定硬件/OS API，并自行实现 Provider 协议的 Clip | 不是 SDK Clip |
+| **Builtin Clip** | 在 `pinixd` 进程内运行的 Clip（Go），通过 `builtin.Registry` 注册 | 不是 SDK Clip，没有 IPC |
+| **Hub** | 路由中心 —— 管理 alias 分配和 invoke 路由。单一事实来源 | 不管理 Clip 生命周期 |
+| **Provider** | 连接协议（ProviderStream）—— 注册 Clip 并转发调用 | 不等同于 Runtime |
+| **Runtime** | 生命周期管理器（RuntimeStream）—— 安装、启动、停止 SDK Clip | 不是 Provider（虽然它会扮演 Provider），不负责路由 |
+| **Alias** | Hub 为 Clip 分配的唯一标识。格式：`{name}-{4hex}`，也可通过 `--alias` 由用户指定 | 不是 package name |
+| **Package** | Clip 的发布标识：`@scope/name` 格式 | 不是 alias |
+| **Scope** | Token 携带的 owner identity（`@cp`、`@pinixai`）。决定 Clip 可见性 | 不是 tenant |
+| **Slot** | 依赖声明 —— 映射到 package constraint 的逻辑名称 | 不是 binding |
+| **Binding** | Clip 侧的 slot → alias 映射（存储在 `bindings.json` 中） | 不存在于 Hub 侧 |
+| **Manifest** | 机器可读的 Clip 描述：commands、patterns、entities、input schemas | 不只是 description string |
+| **Portal / Console** | 用于管理 Clip、与 Agent 聊天、浏览 Marketplace 的 Web UI | 不是 Agent Runtime，不运行 LLM |
+| **Agent Runtime** | LLM 执行引擎（Go）。本地：pinixd 中的 builtin Clip `agent`。云端：pinix-api `/ai/*` | 概念上不是 Clip，虽然会注册为 Clip |
+| **Scheduler** | 基于 cron 的任务调度器，pinixd 中的 builtin Clip | 不是单独的服务 |
+| **Registry** | Clip 的 package repository。用 `pinix registry publish` 发布，用 `pinix hub add` 安装 | 不是 npm |
+| **Marketplace** | 用于发现共享 Clip 的平台（运行中的实例，不是代码 package） | 不等同于 Registry |
+| **SharedClip** | 用户通过 Cloud Hub 暴露给其他用户的运行中 Clip instance。访问模式包括：public、unlisted、private、token | 不是代码分发 |
+| **Subscription** | 用户主动选择访问某个 SharedClip。SharedClip 出现在用户 Clip 列表前必须先订阅 | 不是自动的 |
+| **Credit** | 平台货币。1 credit = 0.001 CNY。用于云端 Agent 对话和共享 Clip 调用 | 不是真实货币，不能提现 |
+| **BB-Browser** | 浏览器自动化 Edge Clip。将 Chrome 变成具备 36 个平台 adapter 的结构化 API | 不是 scraper |
+| **clip-dock** | 设备能力包 —— 安装在设备上，将它的全部能力作为 Edge Clip 暴露 | 不是 Portal |
+| **IPC v2** | Runtime 和 SDK Clip 之间的 NDJSON 协议（stdin/stdout） | 不是 HTTP |
+| **ProviderStream** | Provider 和 Hub 之间的双向 Connect-RPC stream | 不是 REST |
+| **Connect-RPC** | 用于所有 Hub 通信的 HTTP/2 + Protocol Buffers RPC 框架 | 不是 gRPC（相似，但 HTTP-native） |

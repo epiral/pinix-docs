@@ -1,8 +1,139 @@
 ---
-title: "BB-Browser"
-description: "Your browser is the API — 36 platforms, 103 commands, zero API keys."
+title: BB-Browser
+description: "你的浏览器就是 API —— 36 个平台、103 个命令、零 API key。"
 ---
 
-:::note
-This page is being translated to Chinese. Please refer to the [English version](/edge-clips/bb-browser/) for now.
-:::
+import { Aside } from "@astrojs/starlight/components";
+
+**BB-Browser** 将你的 Web 浏览器变成结构化 API。你不需要抓取 HTML 或逆向工程 API，BB-Browser 使用面向具体站点的 adapter，像真人用户一样与网站交互 —— 并返回干净的结构化数据。
+
+## 工作原理
+
+BB-Browser 控制一个有界面的 Chrome 实例，并通过 Pinix Hub 暴露面向各平台的命令：
+
+```
+Agent / CLI
+    │
+    ▼
+Hub ──► bb-browser-daemon ──► Chrome
+            │                    │
+            │  site adapters     │  real browser
+            │  ├─ twitter        │  ├─ cookies
+            │  ├─ google         │  ├─ JS execution
+            │  ├─ hackernews     │  ├─ DOM interaction
+            │  └─ ...            │  └─ anti-detection
+            │                    │
+            └── structured data ◄┘
+```
+
+## 平台覆盖
+
+BB-Browser 内置 **36 个平台 adapter** 和 **103 个命令**：
+
+| 类别 | 平台 |
+|----------|-----------|
+| **搜索** | Google, Bing, DuckDuckGo |
+| **社交** | Twitter/X, Reddit, Xiaohongshu, Weibo |
+| **技术** | HackerNews, GitHub, Stack Overflow, arXiv |
+| **知识** | Wikipedia, Zhihu, Bilibili |
+| **商业** | Xueqiu (stocks), 12306 (trains), Amap (maps) |
+| **媒体** | YouTube, Bilibili, Douyin |
+| **更多** | 20+ 个额外平台 |
+
+## 使用
+
+BB-Browser 会由 `pinix start` 自动启动。它的命令会出现在 `pinix hub list` 中：
+
+```bash
+# Search Google
+pinix invoke google search "pinix ai agent"
+
+# Get HackerNews top stories
+pinix invoke hackernews top
+
+# Search Twitter
+pinix invoke twitter search "AI agents" --sort recent
+
+# Get stock quotes
+pinix invoke xueqiu quote "AAPL"
+```
+
+### 结构化输出
+
+所有命令都会返回结构化 JSON：
+
+```bash
+pinix invoke hackernews top --json
+```
+
+```json
+{
+  "items": [
+    {
+      "id": "12345",
+      "title": "Show HN: Pinix — Capability platform for AI Agents",
+      "url": "https://github.com/epiral/pinix",
+      "score": 342,
+      "author": "builder",
+      "comments": 128,
+      "time": "2h ago"
+    }
+  ]
+}
+```
+
+### JQ 过滤
+
+在命令行中过滤输出：
+
+```bash
+pinix invoke hackernews top --jq '.items[:3].title'
+```
+
+## 认证
+
+有些平台需要认证（Twitter、Xiaohongshu 等）。BB-Browser 使用你现有的浏览器 cookie：
+
+1. 打开 Chrome（由 bb-browser 管理的那个）
+2. 手动登录对应平台
+3. BB-Browser 会在后续命令中使用这些 cookie
+
+不需要登录的平台（HackerNews、Wikipedia、Google）可以立即使用。
+
+<Aside type="tip">
+  Chrome 以 **headed mode** 运行（不是 headless），以避免反自动化检测。在 macOS 上它会离屏渲染；在 Linux 上，Xvfb 提供虚拟显示。
+</Aside>
+
+## MCP 集成
+
+BB-Browser 也可以作为独立 MCP server 使用：
+
+```json
+{
+  "mcpServers": {
+    "bb-browser": {
+      "command": "bb-browser-daemon",
+      "args": ["--mcp"]
+    }
+  }
+}
+```
+
+也可以通过 Pinix 的 Hub MCP 使用它，让所有平台和你的其他 Clip 一起可用。
+
+## 架构
+
+BB-Browser 包含三个组件：
+
+| 组件 | 用途 |
+|-----------|---------|
+| `bb-browser` | CLI —— 直接在终端中使用 |
+| `bb-browser-daemon` | Edge Clip Provider —— 连接到 Hub，管理 Chrome |
+| `bb-viewer` | Stream viewer —— 用于远程浏览器查看（自动下载） |
+
+daemon 管理 Chrome 生命周期，并将调用路由到相应的站点 adapter。
+
+## 延伸阅读
+
+- [GitHub 上的 BB-Browser](https://github.com/epiral/bb-browser)
+- [Provider 协议](/zh/edge-clips/provider-protocol/) —— BB-Browser 如何连接到 Hub

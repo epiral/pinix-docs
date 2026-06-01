@@ -1,8 +1,113 @@
 ---
-title: "Building an Edge Clip"
-description: "How to build an Edge Clip that connects to the Hub via the Provider protocol."
+title: 构建 Edge Clip
+description: "如何构建一个通过 Provider 协议连接到 Hub 的 Edge Clip。"
 ---
 
-:::note
-This page is being translated to Chinese. Please refer to the [English version](/edge-clips/building-edge-clip/) for now.
-:::
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+Edge Clip 是一个独立服务，它实现 [Provider 协议](/zh/edge-clips/provider-protocol/) 来向 Hub 注册 Clip。不同于由 Runtime 管理的 SDK Clip，Edge Clip 自己管理生命周期。
+
+## 什么时候构建 Edge Clip
+
+当你的能力满足以下条件时，适合构建 Edge Clip：
+
+- 需要 **原生系统访问**（硬件、OS API）
+- 需要一个 **长期运行的进程**（daemon、浏览器实例）
+- 无法在 Bun/TypeScript sandbox 中运行
+- 需要 **直接控制** 自己的进程生命周期
+
+如果你的 Clip 是标准 API wrapper 或数据处理工具，请改用 [SDK 方式](/zh/clip-development/getting-started/) —— 它更简单。
+
+## 最小实现
+
+<Steps>
+
+1. **连接到 Hub**
+
+   与 Hub 的 Connect-RPC endpoint 建立 ProviderStream 连接：
+
+   ```
+   POST /pinix.hub.v1.HubService/ProviderStream
+   Content-Type: application/connect+proto
+   Authorization: Bearer <hub-token>
+   ```
+
+   这是一个双向 stream。使用你所用语言的 gRPC/Connect-RPC client library。
+
+2. **注册你的 Clip**
+
+   发送包含 Clip 定义的 `RegisterClips` 消息：
+
+   ```json
+   {
+     "type": "RegisterClips",
+     "clips": [{
+       "package": "my-edge-clip",
+       "commands": [{
+         "name": "status",
+         "description": "Get device status",
+         "input": {}
+       }]
+     }]
+   }
+   ```
+
+3. **处理调用**
+
+   监听 `InvokeRequest` 消息并响应：
+
+   ```json
+   // Receive
+   { "type": "InvokeRequest", "requestId": "r1", "command": "status" }
+
+   // Respond
+   { "type": "InvokeResponse", "requestId": "r1", "output": { "status": "online" } }
+   ```
+
+4. **响应 heartbeat**
+
+   收到 `Heartbeat` 时，立即发回一个 heartbeat。
+
+</Steps>
+
+## 实现检查清单
+
+- [ ] 通过 ProviderStream 连接到 Hub
+- [ ] 注册包含 commands 和 schemas 的 Clip
+- [ ] 处理 `InvokeRequest` → 返回 `InvokeResponse`
+- [ ] 在超时时间内响应 heartbeat
+- [ ] 断开连接时使用指数退避自动重连
+- [ ] 优雅关闭（unregister Clip，关闭 stream）
+- [ ] 记录所有状态转换日志（connect、disconnect、error、reconnect）
+
+<Aside type="caution">
+  **绝不能因网络错误退出。** 当 ProviderStream 断开时，你的 Edge Clip 必须自动重连。使用指数退避（1s、2s、4s、8s，... 上限 30s）。
+</Aside>
+
+## 参考实现
+
+[BB-Browser](https://github.com/epiral/bb-browser)（`bb-browser-daemon`）是参考 Edge Clip 实现。它：
+
+- 作为 Provider 连接到 Hub
+- 将 100+ 平台 adapter 注册为 Clip
+- 管理一个用于浏览器自动化的 Chrome 实例
+- 处理 heartbeat 和重连
+- 同时支持连接本地 Hub 和 Cloud Hub
+
+阅读它的 `daemon/` 目录，可以看到一个完整且经过生产验证的 Edge Clip。
+
+## 验证
+
+启动你的 Edge Clip 后：
+
+```bash
+# Check it registered with the Hub
+pinix hub list
+# Should show your Edge Clip's commands
+
+# Invoke a command
+pinix invoke my-edge-clip status
+
+# Check Hub logs for the registration
+cat ~/.pinix/logs/pinixd.log | grep "my-edge-clip"
+```

@@ -1,8 +1,122 @@
 ---
-title: "Provider Protocol"
-description: "The ProviderStream protocol that connects Edge Clips and Runtimes to the Hub."
+title: Provider 协议
+description: "连接 Edge Clip 和 Runtime 到 Hub 的 ProviderStream 协议。"
 ---
 
-:::note
-This page is being translated to Chinese. Please refer to the [English version](/edge-clips/provider-protocol/) for now.
-:::
+import { Aside } from "@astrojs/starlight/components";
+
+**ProviderStream** 是一种双向流式 RPC，用来将 Provider（Edge Clip 或 Runtime）连接到 Hub。它负责 Clip 注册、调用转发和健康监控。
+
+## 连接生命周期
+
+```
+Provider                                Hub
+   │                                     │
+   │──── ProviderStream (bidi) ────────►│
+   │                                     │
+   │◄─── ProviderHello ─────────────────│  Connection accepted
+   │                                     │
+   │──── RegisterClips ────────────────►│  Register available Clips
+   │                                     │
+   │◄─── InvokeRequest ────────────────│  Hub forwards invocations
+   │──── InvokeResponse ──────────────►│  Clip returns results
+   │                                     │
+   │◄─── Heartbeat ────────────────────│  Keep-alive (every 30s)
+   │──── Heartbeat ───────────────────►│
+   │                                     │
+```
+
+## Provider → Hub 消息
+
+| 消息 | 用途 |
+|---------|---------|
+| `RegisterClips` | 向 Hub 注册一个或多个 Clip |
+| `UnregisterClips` | 从 Hub 移除 Clip |
+| `InvokeResponse` | 返回一次调用的结果 |
+| `InvokeStreamChunk` | 发送一个流式响应分块 |
+| `InvokeStreamEnd` | 结束一个流式响应 |
+| `Heartbeat` | 响应 Hub 的 heartbeat |
+| `Log` | 转发 Clip 日志输出 |
+
+## Hub → Provider 消息
+
+| 消息 | 用途 |
+|---------|---------|
+| `ProviderHello` | 连接已接受，包含 session ID |
+| `InvokeRequest` | 将一次调用转发给 Clip |
+| `Heartbeat` | keep-alive ping |
+| `RuntimeInstall` |（仅 Runtime）安装一个 Clip package |
+| `RuntimeUninstall` |（仅 Runtime）移除一个 Clip package |
+
+## 注册
+
+当 Provider 连接后，它会注册自己的 Clip：
+
+```json
+{
+  "type": "RegisterClips",
+  "clips": [
+    {
+      "package": "bb-browser",
+      "alias": "browser",
+      "commands": [
+        {
+          "name": "navigate",
+          "description": "Navigate to a URL",
+          "input": { "url": { "type": "string", "required": true } }
+        }
+      ]
+    }
+  ]
+}
+```
+
+Hub 会分配 alias（如果建议的 alias 可用，也会直接采用），并将这些 Clip 加入路由表。
+
+## 调用
+
+当客户端调用一个 Clip 时，Hub 会：
+
+1. 在路由表中查找 alias
+2. 找到注册它的 Provider
+3. 通过 ProviderStream 发送 `InvokeRequest`
+4. Provider 将请求交给 Clip
+5. 响应沿同一条 stream 返回
+
+```json
+// Hub → Provider
+{
+  "type": "InvokeRequest",
+  "requestId": "req-abc123",
+  "alias": "browser",
+  "command": "navigate",
+  "input": { "url": "https://example.com" }
+}
+
+// Provider → Hub
+{
+  "type": "InvokeResponse",
+  "requestId": "req-abc123",
+  "output": { "title": "Example Domain", "url": "https://example.com" }
+}
+```
+
+## Heartbeat
+
+Hub 会定期发送 heartbeat 消息（默认每 30 秒一次）。Provider 必须在超时时间内响应。如果 Provider 错过 heartbeat，Hub 会将它的 Clip 标记为离线，并从路由表中移除。
+
+<Aside type="caution">
+  **必须重连。** 如果 ProviderStream 断开，Provider 必须使用指数退避自动重连。`pinixd` 永远不会因网络错误退出 —— 这是设计不变量。
+</Aside>
+
+## 认证
+
+ProviderStream 需要 Hub Token 进行认证。Token 通过 `pinix login` 获取，并决定 Provider 的作用域。
+
+对于本地连接（同一台机器），开发时可以使用 Super Token。
+
+## 延伸阅读
+
+- [构建 Edge Clip](/zh/edge-clips/building-edge-clip/) —— 分步指南
+- [架构](/zh/platform/architecture/) —— Provider 如何融入系统
+- [协议参考](/zh/platform/protocol/) —— 包含序列图的完整协议规范

@@ -1,8 +1,213 @@
 ---
-title: "Command Design"
-description: "Detailed guide for designing Clip commands — naming, grouping, input schemas, and response patterns."
+title: 命令设计
+description: "设计 Clip 命令的详细指南 —— 命名、分组、输入 schema 和响应模式。"
 ---
 
-:::note
-This page is being translated to Chinese. Please refer to the [English version](/clip-development/command-design/) for now.
-:::
+import { Aside } from "@astrojs/starlight/components";
+
+命令是 Agent 与你的 Clip 之间的接口。好的命令设计会让 Clip 更容易被发现、更高效、更易用。
+
+## 命名约定
+
+### 命令使用动词
+
+```
+list, get, search, create, add, update, delete, complete, send, read
+```
+
+### 命令分组使用名词
+
+当一个 Clip 有多种资源类型时，用名词把相关命令分组：
+
+```typescript
+// Command groups
+clip.commandGroup("message", {
+  description: "Manage messages",
+});
+
+clip.command("message send", { ... });
+clip.command("message list", { ... });
+clip.command("message read", { ... });
+
+clip.commandGroup("channel", {
+  description: "Manage channels",
+});
+
+clip.command("channel list", { ... });
+clip.command("channel create", { ... });
+```
+
+### 命名规则
+
+- 使用小写和连字符：用 `get-details`，不要用 `getDetails`
+- 保持具体：用 `search`，不要用 `find`（除非语义不同）
+- 避免冗余：用 `list`，不要用 `list-items`（Clip 名称已经提供上下文）
+- 适用时使用标准 CRUD 动词
+
+<Aside type="tip">
+  **语义重叠时合并。** 如果 `search` 和 `find` 做的是同一件事，只保留一个。每个命令都会增加 Agent 的决策空间 —— 命令越少，选择就越快、越准确。
+</Aside>
+
+## 输入 schema 设计
+
+### 明确声明类型
+
+```typescript
+clip.command("search", {
+  input: {
+    query: {
+      type: "string",
+      description: "Search query",
+      required: true,
+    },
+    limit: {
+      type: "number",
+      description: "Maximum number of results",
+      default: 10,
+    },
+    sort: {
+      type: "string",
+      description: "Sort order",
+      enum: ["recent", "relevant", "popular"],
+      default: "relevant",
+    },
+  },
+  handler: async ({ input }) => { ... },
+});
+```
+
+每个参数都应该有：
+- **type** —— `string`、`number`、`boolean`、`array`、`object`
+- **description** —— 它的作用（Agent 会读取这个信息）
+- **required** —— Agent 是否必须提供它
+- **enum** —— 适用时列出合法值
+- **default** —— 合理的默认值可以减少 Agent 决策
+
+### 避免自由形式对象
+
+```typescript
+// Bad: opaque object, Agent can't discover fields
+input: {
+  options: { type: "object" }
+}
+
+// Good: explicit fields
+input: {
+  sort: { type: "string", enum: ["asc", "desc"] },
+  limit: { type: "number", default: 10 },
+  offset: { type: "number", default: 0 },
+}
+```
+
+## 响应设计
+
+### 列表：精简且可行动
+
+```typescript
+// Good list response
+{
+  items: [
+    { id: "p1", title: "Top AI papers this week", score: 342, comments: 128 },
+    { id: "p2", title: "Show HN: My new project", score: 89, comments: 24 },
+  ],
+  total: 2,
+  hasMore: false,
+}
+```
+
+好的列表响应具备这些关键属性：
+- 每个条目都有 **ID**（支持后续行动）
+- 包含用于决策的 **关键字段**（标题、状态、分数）
+- 包含 **分页元数据**（`total`、`hasMore`、`nextCursor`）
+- **不要有嵌套对象** —— 保持扁平
+
+### 详情：完整且结构化
+
+```typescript
+// Good detail response
+{
+  id: "p1",
+  title: "Top AI papers this week",
+  url: "https://...",
+  author: "dang",
+  score: 342,
+  comments: 128,
+  created: "2026-05-30T10:00:00Z",
+  content: "Full text content...",
+  topComments: [
+    { id: "c1", author: "user1", text: "Great summary", score: 42 },
+  ],
+}
+```
+
+### Mutation：返回受影响实体
+
+```typescript
+// Good: returns what changed
+clip.command("complete", {
+  handler: async ({ input }) => {
+    const task = await db.complete(input.id);
+    return task; // The full updated task
+  },
+});
+
+// Bad: returns nothing useful
+clip.command("complete", {
+  handler: async ({ input }) => {
+    await db.complete(input.id);
+    return { success: true }; // Agent has to fetch again to see the result
+  },
+});
+```
+
+## 流式输出
+
+对于长时间运行的操作，使用 streaming：
+
+```typescript
+clip.command("monitor", {
+  description: "Monitor a feed in real-time",
+  streaming: true,
+  handler: async function* ({ input }) {
+    while (true) {
+      const update = await feed.poll();
+      if (update) {
+        yield update;
+      }
+      await sleep(5000);
+    }
+  },
+});
+```
+
+Streaming 命令可以用 `pinix invoke <alias> <command> --stream` 调用，也可以通过 streaming invoke RPC 调用。
+
+## Stdin 支持
+
+命令可以通过 stdin 接收大段文本输入：
+
+```typescript
+clip.command("analyze", {
+  description: "Analyze text content",
+  stdin: true,
+  handler: async ({ input, stdin }) => {
+    // stdin contains the piped text
+    const analysis = await analyze(stdin);
+    return analysis;
+  },
+});
+```
+
+```bash
+cat article.txt | pinix invoke my-clip analyze
+```
+
+## 命令数量指南
+
+| 命令数 | 建议 |
+|----------|---------------|
+| 1-5 | 适合一个聚焦的 Clip |
+| 6-10 | 使用命令分组组织结构 |
+| 10+ | 考虑拆分成多个 Clip |
+
+随着可选项增多，Agent 的有效性会下降。一个有 3 个设计良好的命令的 Clip，比一个有 15 个重叠命令的 Clip 更好。

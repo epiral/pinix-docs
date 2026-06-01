@@ -1,8 +1,197 @@
 ---
-title: "Protocol Reference"
-description: "Complete protocol specification for Pinix — Connect-RPC APIs, ProviderStream messages, IPC v2, and sequence diagrams."
+title: 协议参考
+description: "Pinix 的完整协议规范 —— Connect-RPC API、ProviderStream 消息、IPC v2 和序列图。"
 ---
 
-:::note
-This page is being translated to Chinese. Please refer to the [English version](/platform/protocol/) for now.
-:::
+import { Aside } from "@astrojs/starlight/components";
+
+这是 Pinix 的权威协议参考。它覆盖 Connect-RPC API、ProviderStream wire format 和 IPC v2 协议。
+
+## Connect-RPC API（HubService）
+
+所有 Hub 通信都使用 [Connect-RPC](https://connectrpc.com/)（HTTP/2、Protocol Buffers）。Hub 暴露以下 RPC：
+
+| RPC | 类型 | 说明 |
+|-----|------|-------------|
+| `Invoke` | Unary | 调用 Clip command |
+| `InvokeStream` | Server stream | 以流式响应调用 |
+| `ListClips` | Unary | 列出所有已注册的 Clip |
+| `GetClipManifest` | Unary | 获取 Clip 的完整 manifest |
+| `GetClipWeb` | Unary | 代理 Clip Web UI 资源 |
+| `AddClip` | Unary | 从 Registry 安装 Clip |
+| `RemoveClip` | Unary | 卸载 Clip |
+| `ProviderStream` | Bidirectional | Provider 连接（注册 + invoke 转发） |
+| `RuntimeStream` | Bidirectional | Runtime 生命周期管理 |
+| `GetLogs` | Server stream | 流式读取 Clip 日志 |
+| `HubInfo` | Unary | Hub metadata（version、mode） |
+| `DataRead` | Unary | 读取 Clip 数据 |
+| `DataWrite` | Unary | 写入 Clip 数据 |
+
+### 认证
+
+三种 token 类型：
+
+| Token | 作用域 | 使用场景 |
+|-------|-------|----------|
+| **Hub Token** | 用户作用域（`@username`） | CLI、Console、Cloud Hub |
+| **Clip Token** | 单个 Clip | Clip 到 Hub 的通信 |
+| **Super Token** | 完全访问 | 本地开发 |
+
+Token 通过 `Authorization: Bearer <token>` header 传递。
+
+## ProviderStream 消息
+
+ProviderStream 是 Provider 和 Hub 之间的双向 stream。
+
+### Provider → Hub
+
+```typescript
+type ProviderMessage =
+  | { type: "RegisterClips"; clips: ClipInfo[] }
+  | { type: "UnregisterClips"; aliases: string[] }
+  | { type: "InvokeResponse"; requestId: string; output: any }
+  | { type: "InvokeStreamChunk"; requestId: string; chunk: any }
+  | { type: "InvokeStreamEnd"; requestId: string }
+  | { type: "Heartbeat" }
+  | { type: "Log"; alias: string; level: string; message: string };
+```
+
+### Hub → Provider
+
+```typescript
+type HubMessage =
+  | { type: "ProviderHello"; sessionId: string }
+  | { type: "InvokeRequest"; requestId: string; alias: string; command: string; input: any }
+  | { type: "Heartbeat" }
+  | { type: "RuntimeInstall"; package: string; version: string }
+  | { type: "RuntimeUninstall"; alias: string };
+```
+
+### Request ID 规则
+
+- 格式：UUID v4
+- 每次调用唯一
+- 用于匹配 `InvokeRequest` → `InvokeResponse`
+- 必须包含在所有 response 和 streaming 消息中
+
+## IPC v2（NDJSON）
+
+Runtime 和 SDK Clip 之间通过 stdin/stdout 上的 NDJSON（newline-delimited JSON）通信。
+
+### 消息格式
+
+```json
+{"type":"invoke","id":"req-1","command":"list","input":{}}
+```
+
+每行一个 JSON object，以 `\n` 结尾。
+
+### 消息类型
+
+| 类型 | 方向 | 用途 |
+|------|-----------|---------|
+| `invoke` | Runtime → Clip | 调用一个 command |
+| `response` | Clip → Runtime | command 结果 |
+| `stream` | Clip → Runtime | 流式分块 |
+| `stream_end` | Clip → Runtime | stream 结束 |
+| `invoke_clip` | Clip → Runtime | 跨 Clip 调用请求 |
+| `invoke_clip_response` | Runtime → Clip | 跨 Clip 结果 |
+| `log` | Clip → Runtime | 结构化日志消息 |
+
+### Invoke 流程
+
+```
+Runtime                              Clip (Bun process)
+   │                                      │
+   │─── {"type":"invoke","id":"r1",  ───►│
+   │     "command":"list","input":{}}     │
+   │                                      │
+   │◄── {"type":"response","id":"r1", ───│
+   │     "output":{"items":[...]}}        │
+   │                                      │
+```
+
+### 跨 Clip invoke 流程
+
+```
+Runtime                Clip A                   Clip B
+   │                     │                        │
+   │── invoke ──────────►│                        │
+   │                     │                        │
+   │                     │── invoke_clip ────────►│ (via Runtime + Hub)
+   │                     │                        │
+   │                     │◄─ invoke_clip_response─│
+   │                     │                        │
+   │◄── response ───────│                        │
+```
+
+## 错误码
+
+| 代码 | 含义 |
+|------|---------|
+| `NOT_FOUND` | 找不到 Clip 或 command |
+| `INVALID_ARGUMENT` | 缺少输入参数或输入参数无效 |
+| `PERMISSION_DENIED` | Token 没有访问权限 |
+| `UNAVAILABLE` | Clip 离线或 Provider 已断开 |
+| `INTERNAL` | Clip handler 抛出错误 |
+| `DEADLINE_EXCEEDED` | 调用超时 |
+
+错误以结构化 object 返回：
+
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Clip 'my-clip' not found"
+  }
+}
+```
+
+## 序列图
+
+### Clip 注册
+
+```
+Provider          Hub
+   │                │
+   │── ProviderStream (connect) ──►│
+   │◄── ProviderHello ────────────│
+   │                               │
+   │── RegisterClips ─────────────►│
+   │   [{package, alias, commands}]│
+   │                               │
+   │   Hub adds to routing table   │
+   │                               │
+```
+
+### Unary 调用
+
+```
+Client     Hub      Provider    Clip
+  │         │          │          │
+  │─Invoke─►│          │          │
+  │         │─InvokeReq►│         │
+  │         │          │─invoke──►│
+  │         │          │◄─response│
+  │         │◄InvokeRes─│         │
+  │◄─result─│          │          │
+```
+
+### Streaming 调用
+
+```
+Client     Hub      Provider    Clip
+  │         │          │          │
+  │─Stream─►│          │          │
+  │         │─InvokeReq►│         │
+  │         │          │─invoke──►│
+  │         │          │◄─stream──│  (chunk 1)
+  │         │◄StreamChk─│         │
+  │◄─chunk──│          │          │
+  │         │          │◄─stream──│  (chunk 2)
+  │         │◄StreamChk─│         │
+  │◄─chunk──│          │          │
+  │         │          │◄stream_end│
+  │         │◄StreamEnd─│         │
+  │◄─end────│          │          │
+```

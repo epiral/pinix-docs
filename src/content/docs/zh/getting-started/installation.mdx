@@ -1,8 +1,91 @@
 ---
-title: "Installation"
-description: "Install Pinix on macOS or Linux in one command."
+title: 安装
+description: "在 macOS 或 Linux 上用一条命令安装 Pinix。"
 ---
 
-:::note
-This page is being translated to Chinese. Please refer to the [English version](/getting-started/installation/) for now.
-:::
+import { Aside, Tabs, TabItem, Steps } from "@astrojs/starlight/components";
+
+## 系统要求
+
+| | 支持 |
+|---|---|
+| **OS** | macOS, Linux |
+| **架构** | arm64（Apple Silicon、ARM 服务器）、amd64（Intel/AMD） |
+| **自动安装** | Node.js, Bun, bb-browser, Chrome |
+
+<Aside>
+  目前不支持 Windows。在 Windows 上请使用 [Docker](#docker) 或 WSL2。
+</Aside>
+
+## 一行命令安装
+
+```bash
+curl -fsSL dl.pinixai.com/install.sh | sh
+```
+
+这会安装你需要的一切：
+
+| 组件 | 用途 |
+|-----------|---------|
+| `pinix` | CLI + daemon（单个二进制文件） |
+| Node.js | Runtime 依赖（如果缺失，会通过 fnm 安装） |
+| Bun | Clip runtime —— 运行 TypeScript Clips |
+| bb-browser | 浏览器自动化 Edge Clip |
+
+Chrome 会在第一次运行 `pinix start` 时自动下载。
+
+### 仅 CLI 模式
+
+如果你只需要 CLI（不需要 daemon，不需要浏览器），使用：
+
+```bash
+curl -fsSL dl.pinixai.com/install.sh | sh -s -- --cli
+```
+
+这只会安装 `pinix` 二进制文件，用于远程调用另一个 Hub。
+
+## Docker
+
+用于零配置部署：
+
+```bash
+docker run -d --shm-size=2g lueco/pinix <your-hub-token>
+```
+
+Docker 镜像包含 pinix、Bun、Node.js、bb-browser、Chrome 和 Xvfb。它会启动 daemon，并使用提供的 token 自动登录。
+
+注册后，从 [pinixai.com/settings](https://pinixai.com/settings) 获取你的 Hub token。
+
+## 从源码构建
+
+需要 Go 1.25+。
+
+```bash
+git clone https://github.com/epiral/pinix.git
+cd pinix
+make build
+```
+
+这会在当前目录生成 `pinix` 二进制文件。你还需要单独安装 Bun 和 bb-browser：
+
+```bash
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
+
+# Install bb-browser
+npm install -g bb-browser
+```
+
+## 升级
+
+Pinix 可以自我升级：
+
+```bash
+pinix upgrade
+```
+
+这会下载最新二进制文件并更新 bb-browser。
+
+## 下一步
+
+安装完成后，继续阅读 [快速开始](/zh/getting-started/quick-start/)，启动 daemon 并开始使用 Clips。

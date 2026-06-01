@@ -1,8 +1,95 @@
 ---
-title: "Your First Clip"
-description: "Install a Clip from the Registry, invoke it from the CLI, and see it in the Console."
+title: 你的第一个 Clip
+description: "从 Registry 安装一个 Clip，通过 CLI 调用它，并在 Console 中查看它。"
 ---
 
-:::note
-This page is being translated to Chinese. Please refer to the [English version](/getting-started/first-clip/) for now.
-:::
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+daemon 已启动且已登录后，我们来安装并使用你的第一个 Clip。
+
+<Steps>
+
+1. **安装一个 Clip**
+
+   ```bash
+   pinix hub add @pinix/todo
+   ```
+
+   这会从 Registry 下载 `@pinix/todo` Clip，并在本地启动它。Runtime 会管理它的生命周期 —— 如果它崩溃，会自动重启。
+
+2. **列出你的 Clips**
+
+   ```bash
+   pinix hub list
+   ```
+
+   你应该会在列表中看到 `todo`，以及 bb-browser 的平台适配器（hackernews、google、twitter 等）。
+
+3. **使用它**
+
+   ```bash
+   # Add a task
+   pinix invoke todo add "Read the Pinix docs"
+
+   # List tasks
+   pinix invoke todo list
+
+   # Complete a task
+   pinix invoke todo complete <task-id>
+   ```
+
+4. **在 Console 中查看**
+
+   打开 [localhost:9000](http://localhost:9000)，进入 **Clips**。你会看到已安装的 Clips，以及它们的状态、命令和 Web UI（如果有）。
+
+</Steps>
+
+## 探索可用的 Clips
+
+### 通过 CLI
+
+```bash
+# Search the Registry
+pinix registry search todo
+
+# See package details
+pinix registry info @pinix/todo
+```
+
+### 通过 Marketplace
+
+打开 Console，进入 **Marketplace**，即可浏览、搜索并安装其他用户的 Clips。
+
+你也可以访问 [pinixai.com 上的 Marketplace](https://pinixai.com/marketplace)（需要登录）。
+
+## 查看命令详情
+
+每个 Clip 都是自描述的：
+
+```bash
+# See all commands of a Clip
+pinix invoke todo --help
+
+# See details of a specific command
+pinix invoke todo add --help
+```
+
+`--help` 输出包含命令描述、带类型的输入参数和使用示例。
+
+<Aside type="tip">
+  当 Agent 选择要使用哪个 Clip 时，它会从 Clip 的 manifest 中读取同样的信息。文档完善的命令会让 Agent 更有效。
+</Aside>
+
+## 卸载 Clip
+
+```bash
+pinix hub remove todo
+```
+
+Clip 进程会停止，包也会从本地安装中移除。
+
+## 下一步
+
+- [设置 MCP 集成](/zh/getting-started/mcp-integration/)，从 Claude Desktop 或 Cursor 使用你的 Clips
+- [了解 Clip 概念](/zh/concepts/clips/)，理解 Clips 如何工作
+- 如果你想创建能力，可以[构建自己的 Clip](/zh/clip-development/getting-started/)

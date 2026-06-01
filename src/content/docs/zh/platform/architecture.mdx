@@ -1,8 +1,164 @@
 ---
-title: "Architecture"
-description: "System architecture of Pinix — Hub, Runtime, Provider, and how they connect."
+title: 架构
+description: "Pinix 的系统架构 —— Hub、Runtime、Provider，以及它们如何连接。"
 ---
 
-:::note
-This page is being translated to Chinese. Please refer to the [English version](/platform/architecture/) for now.
-:::
+import { Aside } from "@astrojs/starlight/components";
+
+Pinix 的架构包含五个角色：**Hub**、**Clip**、**Edge Clip**、**Provider** 和 **Runtime**。核心原则：**Hub 只看见 Clip**。
+
+## 系统概览
+
+```
+                         ┌─────────────────────────────────────┐
+                         │            pinixd (:9000)            │
+                         │                                      │
+  CLI ─────────────────► │  ┌──────┐    ┌─────────┐            │
+  MCP ─────────────────► │  │ Hub  │◄──►│ Runtime │            │
+  Console ─────────────► │  │      │    │ (Provider)            │
+  Agent ─────────────────┤  │      │    │  ├─ todo (Bun)       │
+                         │  │      │    │  ├─ twitter (Bun)    │
+                         │  │      │    │  └─ ... (Bun)        │
+                         │  │      │    └─────────┘            │
+                         │  │      │                            │
+                         │  │      │◄── bb-browser (Edge Clip) │
+                         │  │      │     ├─ Chrome              │
+                         │  │      │     └─ site adapters       │
+                         │  │      │                            │
+                         │  │      │◄── Builtin Clips           │
+                         │  │      │     ├─ agent               │
+                         │  │      │     └─ scheduler           │
+                         │  └──────┘                            │
+                         └─────────────────────────────────────┘
+                                │
+                                │ ProviderStream (optional)
+                                ▼
+                         ┌──────────────┐
+                         │  Cloud Hub   │
+                         │hub.pinixai.com│
+                         └──────────────┘
+```
+
+## 角色
+
+### Hub
+
+**路由中心**。所有调用都流经 Hub。
+
+- 维护实时路由表：alias → Provider
+- 将 invoke 请求路由到正确的 Clip
+- 管理 alias 分配和冲突解决
+- 没有类型分支 —— 一切都只是 Clip
+
+### Runtime
+
+一个特殊的 **Provider**，负责管理 SDK Clip。
+
+- 从 Registry 下载并安装 Clip package
+- 为每个 Clip 启动/停止 Bun 进程
+- 通过 IPC v2（stdin/stdout 上的 NDJSON）与 Clip 通信
+- 处理 crash recovery 和自动重启
+- 将托管的 Clip 注册到 Hub
+
+### Provider
+
+**连接协议**。任何向 Hub 注册 Clip 的服务都是 Provider。
+
+- Runtime 是 Provider（管理多个 SDK Clip）
+- Edge Clip 是 Provider（管理自己）
+- ProviderStream 是 Provider 和 Hub 之间的双向连接
+
+### Clip
+
+**功能单元**。从 Hub 的视角看，所有 Clip 都相同 —— 它们有 alias 和 command。
+
+### Edge Clip
+
+一个**绑定硬件或 OS API**，并自行实现 Provider 协议的 Clip。
+
+## 调用链
+
+### 用户 → Clip
+
+```
+User ──► CLI/Console ──► Hub ──► Runtime ──► Bun process (Clip)
+                                    │
+                                    └─── IPC v2 (NDJSON)
+```
+
+### Clip → Clip（跨调用）
+
+```
+Clip A handler
+    │
+    └─ invoke("twitter", "search", { query: "AI" })
+         │
+         └─► Hub ──► Runtime ──► twitter Clip
+                                    │
+                          result ◄──┘
+```
+
+所有跨 Clip 调用都经过 Hub。Clip 之间不会直接通信。
+
+### Cloud Hub 连接
+
+```
+Local pinixd ──── ProviderStream ────► Cloud Hub
+   │                                       │
+   ├─ Local Clips visible in Cloud         │
+   │                                       │
+   └─ Cloud shared Clips available locally │
+```
+
+## IPC v2 协议
+
+Runtime 通过 stdin/stdout 上的 **NDJSON**（newline-delimited JSON）与 SDK Clip 通信：
+
+| 消息类型 | 方向 | 用途 |
+|-------------|-----------|---------|
+| `invoke` | Runtime → Clip | 调用一个 command |
+| `response` | Clip → Runtime | 返回结果 |
+| `stream` | Clip → Runtime | 流式响应分块 |
+| `stream_end` | Clip → Runtime | 结束流式响应 |
+| `invoke_clip` | Clip → Runtime | 跨 Clip 调用 |
+| `invoke_clip_response` | Runtime → Clip | 跨 Clip 结果 |
+| `log` | Clip → Runtime | 日志输出 |
+
+## 运行模式
+
+| 模式 | Flag | 组件 | 使用场景 |
+|------|------|-----------|----------|
+| **Full** | (default) | Hub + Runtime + Portal | 标准本地设置 |
+| **Hub-only** | `--hub-only` | 仅 Hub | 专用路由服务器 |
+| **Provider** | `--hub <url>` | 仅 Runtime → 远程 Hub | Headless worker |
+
+## 配置
+
+配置存储在 `~/.pinix/`：
+
+```
+~/.pinix/
+├── client.json          # Login token, Hub URL, user info
+├── clips/               # Installed SDK Clip packages
+│   └── @scope/
+│       └── name/
+├── data/                # Clip data storage
+│   ├── agent-go/        # Agent Runtime SQLite DB
+│   └── scheduler/       # Scheduler SQLite DB
+└── logs/
+    ├── pinixd.log       # Daemon JSON log
+    ├── bb-browserd-*.log
+    └── <alias>.log      # Per-Clip stderr
+```
+
+## 设计不变量
+
+这些规则是架构法律 —— 违反任何一条都是 bug：
+
+1. **Hub 是唯一路由器。** 所有调用都经过 Hub。
+2. **Binding 位于 Clip 侧**，不在 Hub 中。
+3. **单一 Hub interface。** 本地 Hub 和 Cloud Hub 实现同一个 `HubServiceHandler`。
+4. **pinixd 永远不会因网络错误退出。** 断开的 stream 会使用退避策略自动重连。
+5. **所有 runtime 状态转换都必须记录日志。** 静默失败就是 bug。
+
+参见 [核心概念](/zh/concepts/) 了解完整列表。

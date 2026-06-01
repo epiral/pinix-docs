@@ -1,8 +1,154 @@
 ---
-title: "Clip Web UI"
-description: "Build a web interface for your Clip that runs inside the Pinix Console."
+title: Clip Web UI
+description: "为你的 Clip 构建在 Pinix Console 中运行的 Web 界面。"
 ---
 
-:::note
-This page is being translated to Chinese. Please refer to the [English version](/clip-development/clip-web-ui/) for now.
-:::
+import { Aside } from "@astrojs/starlight/components";
+
+Clip 可以包含一个在 Pinix Console 中运行的 Web UI。除了 CLI 和 Agent 调用之外，这让用户也可以通过可视化界面与你的 Clip 交互。
+
+## 架构
+
+Clip Web UI 运行在隔离上下文中：
+
+```
+Console (pinixai.com / localhost:9000)
+  └── iframe: /<alias>/web/
+        └── Your Clip's web/ directory
+              └── Calls Clip commands via @pinixai/core/web
+```
+
+Web UI 通过 `@pinixai/core/web` 与 Clip 通信，后者会连接到 Hub。Console 只是嵌入并承载 Clip 的 Web UI —— 并不拥有它。
+
+<Aside type="caution">
+  **`@pinixai/core/web` 是 Clip Web UI 调用命令的唯一方式。** 不要直接调用 HTTP endpoint —— Hub 会管理路由和认证。
+</Aside>
+
+## 快速设置
+
+在你的 Clip 项目中创建 `web/` 目录：
+
+```
+my-clip/
+├── clip.json
+├── src/
+│   └── index.ts
+└── web/
+    ├── index.html
+    ├── src/
+    │   └── main.ts
+    └── package.json    # Optional: if using a build tool
+```
+
+### 最小 `web/index.html`
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>My Clip</title>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { createClient } from "@pinixai/core/web";
+
+    const client = createClient();
+
+    async function loadTasks() {
+      const result = await client.invoke("list");
+      document.getElementById("app").innerHTML = result.items
+        .map(item => `<div>${item.title} [${item.status}]</div>`)
+        .join("");
+    }
+
+    loadTasks();
+  </script>
+</body>
+</html>
+```
+
+### 使用框架
+
+你可以使用 React、Vue、Svelte 或任何框架。在 `web/` 目录中设置一个标准 Vite 项目：
+
+```bash
+cd web
+bun create vite . --template react-ts
+bun add @pinixai/core
+```
+
+为 Clip Web 配置 `vite.config.ts`：
+
+```typescript
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig({
+  plugins: [react()],
+  base: "./",  // Important: relative paths for Hub serving
+  build: {
+    outDir: "dist",
+  },
+});
+```
+
+<Aside type="tip">
+  **在 Vite 配置中使用 `base: "./"`。** Clip Web UI 会从子路径（`/<alias>/web/`）提供服务，所以所有资源路径都必须是相对路径。
+</Aside>
+
+## `@pinixai/core/web` API
+
+```typescript
+import { createClient } from "@pinixai/core/web";
+
+const client = createClient();
+
+// Invoke a command
+const result = await client.invoke("list");
+const task = await client.invoke("get", { id: "t1" });
+const created = await client.invoke("add", { title: "New task" });
+
+// Streaming invoke
+const stream = client.invokeStream("monitor");
+for await (const event of stream) {
+  console.log("Update:", event);
+}
+```
+
+## 信任模型
+
+Clip Web UI 在三层信任模型中运行：
+
+```
+Browser (untrusted)
+  │ @pinixai/core/web
+  ▼
+Hub (routing + auth)
+  │ IPC / ProviderStream
+  ▼
+Clip Runtime (trusted execution)
+```
+
+- Web UI 在浏览器中运行 —— 它是不可信的
+- 所有调用都通过 Hub，由 Hub 处理认证
+- Clip 的 handler 在 Runtime 中以服务端方式运行
+
+这意味着：**永远不要把密钥放进 Web UI 代码。** API key、token 和敏感逻辑应该放在 Clip handler 中，而不是浏览器里。
+
+## 开发工作流
+
+1. **在本地启动你的 Clip**：`pinix hub add local/my-clip --path .`
+2. **访问 Web UI**：在 Console 中打开 `http://localhost:9000/clips/my-clip/web`
+3. **迭代**：编辑 `web/` 文件，刷新浏览器查看改动
+4. **构建生产版本**：`cd web && bun run build` —— 发布时使用的是 `web/dist/` 中的构建产物
+
+## 部署说明
+
+当你运行 `pinix registry publish` 时，`web/` 目录（或已构建时的 `web/dist/`）会包含在包中。用户访问 Clip 的 Web UI 时，Hub 会自动提供服务。
+
+常见问题：
+- **Cookie/SameSite 问题**：Cloud Hub 会从 `*.hub.pinix.ai` 子域提供 Web UI。Cookie 必须使用 `SameSite=None; Secure`。
+- **CORS**：所有调用都通过 `@pinixai/core/web`，它会在内部处理 CORS。不要直接向 Hub 发起 HTTP 请求。
+- **MIME 类型**：确保你的构建产物输出正确的文件扩展名。Hub 会根据扩展名提供文件。

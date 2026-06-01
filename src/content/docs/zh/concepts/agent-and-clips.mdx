@@ -1,8 +1,115 @@
 ---
-title: "Agent & Clips"
-description: "Agent thin, Clip thick — how Pinix's architecture makes Agents more capable without requiring more powerful models."
+title: "Agent 与 Clip"
+description: "Agent thin, Clip thick —— Pinix 的架构如何让 Agent 更有能力，而无需更强大的模型。"
 ---
 
-:::note
-This page is being translated to Chinese. Please refer to the [English version](/concepts/agent-and-clips/) for now.
-:::
+import { Aside } from "@astrojs/starlight/components";
+
+Pinix 的 Agent 围绕一个原则设计：**Agent thin, Clip thick。**
+
+Agent 的职责是理解用户想要什么，并路由到正确的 Clip。Clip 的职责是实际完成工作。这个分离让 Pinix Agent 可以配合中端模型工作 —— 当重活都在 Clip 里时，你不需要 GPT-4 或 Claude Opus。
+
+## Agent 做什么
+
+```
+Agent's responsibilities:
+  ├── Intent recognition     → understand what the user wants
+  ├── Clip selection         → pick the right Clip from its manifest
+  ├── Dispatch               → call the right command with right params
+  ├── Memory                 → cross-session context
+  └── Skills = Clips         → no built-in capabilities needed
+
+What the Agent does NOT do:
+  ├── Complex business logic → that's in the Clip
+  ├── Device operations      → that's in the Edge Clip
+  └── Require SOTA models    → Sonnet-class is sufficient
+```
+
+## 为什么中端模型就够了
+
+Clip 的**知识层（Knowledge Layer）**（manifest）已经告诉 Agent 它需要知道的一切：
+
+- *我能做什么* —— 命令和模式
+- *什么时候该用我* —— 匹配模式和实体
+- *怎么调用我* —— 输入 schema
+
+Agent 只需要：
+1. 读取 manifest
+2. 将用户意图匹配到某个模式
+3. 构造正确的参数
+4. 调用命令
+
+不需要复杂推理。不需要围绕*如何*浏览网页或*如何*发送消息做多步规划。这些都由 Clip 处理。
+
+<Aside type="tip">
+  **Builder 的智慧被编码在 Clip 的知识层中。** 这把智能从模型转移到了生态系统。一个构建良好的 Clip 会让任何 Agent 变得更聪明。
+</Aside>
+
+## 工作流示例
+
+用户说：*"Find what's trending on HackerNews about AI and save it to a doc."*
+
+```
+Step 1: Agent reads manifests
+  → hackernews clip: has "top" command, pattern matches "trending"
+  → lark-doc clip: has "create" command, pattern matches "save to doc"
+
+Step 2: Agent plans
+  → First: hackernews.top → get trending posts
+  → Filter: posts about AI
+  → Then: lark-doc.create → save filtered results
+
+Step 3: Execution
+  → invoke hackernews top → returns structured post list
+  → Agent filters for AI-related posts
+  → invoke lark-doc create → creates document with results
+  → Returns summary to user
+
+What happened inside the Clips:
+  hackernews clip:
+    ├── Opened browser → HN front page
+    ├── Extracted post data (title, score, comments, URL)
+    └── Returned structured JSON
+
+  lark-doc clip:
+    ├── Authenticated with Lark API
+    ├── Created new document
+    ├── Formatted content as rich text
+    └── Returned document URL
+```
+
+Agent 从未碰过浏览器。从未调用 Lark API。从未解析 HTML。它只做了两次函数调用，并拿回结构化结果。
+
+## 乘法效应
+
+Clip 不是相加 —— 而是相乘。
+
+安装 5 个 Clip（HackerNews、Google、Twitter、Lark Doc、Scheduler）后，同一个 Agent 可以处理：
+
+| Scenario | Clips used |
+|----------|-----------|
+| 技术发现 | HackerNews + Google + Twitter + Lark Doc |
+| 竞品研究 | Google + Twitter + Browser + Lark Doc |
+| 每日简报 | HackerNews + Google + Twitter + Scheduler |
+| 社交监控 | Twitter + Google + Lark Doc |
+| 内容研究 | Google + HackerNews + Lark Doc |
+
+同样 5 个 Clip，产生 5+ 种不同工作流。没有预设工作流，没有硬编码链路 —— Agent 会根据用户意图决定使用哪些 Clip。
+
+## Builder vs User
+
+| | Builder | User |
+|---|---|---|
+| Who | 具备领域专长的开发者 | 任何人 |
+| Does what | 创建 Clip | 使用 Agent + Clip |
+| Needs | SDK、工具链、分发、认可 | 完成事情、简单安装、无需技术知识 |
+
+### 价值链
+
+```
+Builder's expertise → encoded in Clip → available to User via Agent
+```
+
+理解 Twitter 搜索 API 的 Builder 会把它封装成 Clip。现在，任何用户都可以通过任何 Agent 搜索 Twitter，而无需了解 API、速率限制或浏览器自动化。
+
+**More Clips, More Intelligence.**

@@ -1,8 +1,96 @@
 ---
-title: "Hub & Routing"
-description: "The Hub is Pinix's single routing center — all Clips register here, all invocations flow through here."
+title: "Hub 与路由"
+description: "Hub 是 Pinix 唯一的路由中心 —— 所有 Clip 在这里注册，所有调用都经过这里。"
 ---
 
-:::note
-This page is being translated to Chinese. Please refer to the [English version](/concepts/hub-and-routing/) for now.
-:::
+import { Aside } from "@astrojs/starlight/components";
+
+**Hub** 是 Pinix 的路由中心。每个 Clip 都注册到 Hub，所有调用都经过 Hub。
+
+## 设计原则：Hub 只看见 Clip
+
+Hub 只有一个职责：把调用路由到正确的 Clip。它不关心 Clip 是如何实现的 —— TypeScript SDK Clip、Go builtin、原生 Edge Clip、远程 Provider。对 Hub 来说，它们都只是带有命令的 Clip。
+
+```
+                    ┌─────────────────────────────────┐
+                    │              Hub                 │
+                    │                                  │
+CLI ──────────►     │   Routing Table                  │
+MCP ──────────►     │   ┌──────────┬────────────────┐  │
+Portal ───────►     │   │ Alias    │ Provider       │  │
+Agent ────────►     │   ├──────────┼────────────────┤  │
+                    │   │ todo     │ runtime://local │  │
+                    │   │ twitter  │ runtime://local │  │
+                    │   │ browser  │ provider://bb   │  │
+                    │   │ agent    │ builtin://agent │  │
+                    │   └──────────┴────────────────┘  │
+                    └─────────────────────────────────┘
+```
+
+没有类型分支。没有特殊情况。Hub 维护一张**实时路由表**，将 alias 映射到 Provider。
+
+## Alias
+
+Hub 上的每个 Clip 都有一个唯一的 **alias**。当你安装 Clip 时：
+
+```bash
+pinix hub add @pinix/todo
+# Alias: todo
+
+pinix hub add @pinix/todo --alias my-tasks
+# Alias: my-tasks
+```
+
+alias 是调用句柄 —— `pinix invoke todo list` 会通过 `todo` alias 路由。如果你没有指定 alias，它会从包名自动生成。
+
+## 本地 Hub vs Cloud Hub
+
+Pinix 会在你的机器上运行一个本地 Hub（`pinixd`，端口 9000）。这是你的**本地 Hub** —— 它管理你已安装的 Clip，并路由本地调用。
+
+当你执行 `pinix login`，本地 Hub 会连接到 **Cloud Hub**（`hub.pinixai.com`）。你的本地 Clip 会变得可从云端访问，你也可以使用其他用户共享的 Clip。
+
+```
+┌──────────────────┐         ┌──────────────────┐
+│   Your Machine   │         │    Cloud Hub      │
+│                  │         │                   │
+│  Local Hub :9000 │────────►│  hub.pinixai.com  │
+│  ├─ todo         │ Provider│  ├─ @you/todo     │
+│  ├─ twitter      │ Stream  │  ├─ @you/twitter  │
+│  └─ browser      │         │  └─ @other/...    │
+└──────────────────┘         └──────────────────┘
+```
+
+<Aside type="tip">
+  本地 Hub 和 Cloud Hub 都实现了**同一个接口**（`HubServiceHandler`）。协议是相同的 —— 区别在于作用范围和可达性。
+</Aside>
+
+## 调用流程
+
+当你调用一个 Clip 时：
+
+1. **Client**（CLI / MCP / Portal / Agent）向 Hub 发送 invoke 请求
+2. **Hub** 在路由表中查找 alias
+3. **Hub** 将请求转发给正确的 Provider
+4. **Provider** 将请求送到 Clip 进程
+5. **Clip** 执行并返回响应
+6. **Response** 沿同一条链路返回
+
+```
+Client → Hub → Provider → Clip
+                              │
+Client ← Hub ← Provider ← Clip
+```
+
+对于跨 Clip 调用（一个 Clip 调用另一个 Clip），流程也是一样 —— 发起调用的 Clip 向 Hub 发送 invoke，Hub 将其路由到目标 Clip。一切都经过 Hub。
+
+## 运行模式
+
+`pinixd` 支持多种配置：
+
+| Mode | What it runs | Use case |
+|------|-------------|----------|
+| **Full**（默认） | Hub + Runtime + Portal | 标准本地设置 |
+| **Hub-only** | 仅 Hub | 专用路由服务器 |
+| **Provider** | 仅 Runtime，连接远程 Hub | 无头 Clip worker |
+
+大多数用户通过 `pinix start` 运行 Full 模式。其他模式用于高级部署场景。

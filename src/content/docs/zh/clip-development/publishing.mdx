@@ -1,8 +1,120 @@
 ---
-title: "Publishing"
-description: "Publish your Clip to the Pinix Registry and share it with the world."
+title: 发布
+description: "将你的 Clip 发布到 Pinix Registry，并与全世界共享。"
 ---
 
-:::note
-This page is being translated to Chinese. Please refer to the [English version](/clip-development/publishing/) for now.
-:::
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+发布 Clip 后，任何人都可以通过 `pinix hub add @yourscope/name` 安装它。
+
+## 前置条件
+
+- 一个可工作的 Clip（已用 `pinix hub add local/...` 在本地测试）
+- 已登录：`pinix login`（Registry 使用与 Hub 相同的认证）
+
+## 发布
+
+<Steps>
+
+1. **验证你的身份**
+
+   ```bash
+   pinix registry whoami
+   # → @yourscope
+   ```
+
+2. **检查你的 `clip.json`**
+
+   确保包名与你的 scope 匹配：
+
+   ```json
+   {
+     "name": "@yourscope/my-clip",
+     "version": "0.1.0",
+     "description": "What this Clip does",
+     "main": "src/index.ts"
+   }
+   ```
+
+3. **构建 Web UI（如适用）**
+
+   ```bash
+   cd web && bun run build && cd ..
+   ```
+
+4. **发布**
+
+   ```bash
+   pinix registry publish .
+   ```
+
+   这会打包你的 Clip 目录，并上传到 Registry。
+
+</Steps>
+
+## 版本管理
+
+Registry 遵循 semver。要发布新版本：
+
+1. 更新 `clip.json` 中的 `version`
+2. 再次运行 `pinix registry publish .`
+
+```json
+{
+  "name": "@yourscope/my-clip",
+  "version": "0.2.0"
+}
+```
+
+<Aside type="caution">
+  你不能覆盖已存在的版本。每次发布都必须使用新的版本号。
+</Aside>
+
+## Scope 与权限
+
+- 你只能发布到自己的 scope（`@yourscope/`）
+- Scope 由你的登录身份决定
+- 其他用户使用以下命令安装：`pinix hub add @yourscope/my-clip`
+
+## Sharing 与 Publishing
+
+**Publishing** 会把代码放入 Registry —— 用户下载并在自己的机器上运行这个 Clip。
+
+**Sharing**（通过 Console 的 Sharing 功能）会把你的 Clip 的一个*运行中实例*暴露给其他用户。代码仍留在你的机器上；调用会通过 Cloud Hub 路由。
+
+| | Publishing | Sharing |
+|---|---|---|
+| 代码分发 | 是（Registry） | 否（在你的机器上运行） |
+| 用户运行位置 | 他们的机器 | 你的机器（通过 Cloud Hub） |
+| 货币化 | 不能直接货币化 | 通过 Credit 按次定价 |
+| 可见性 | Registry 搜索 | Marketplace（共享的 Clip） |
+
+## 会发布哪些内容
+
+发布命令会打包：
+
+```
+my-clip/
+├── clip.json         ✓ Always included
+├── src/              ✓ Source code
+├── package.json      ✓ Dependencies
+├── node_modules/     ✗ Excluded (installed on user's machine)
+├── web/dist/         ✓ Built Web UI (if exists)
+├── web/src/          ✗ Web source (excluded if dist/ exists)
+└── .git/             ✗ Excluded
+```
+
+## 验证已发布的 Clip
+
+发布后，确认它可以访问：
+
+```bash
+# Search for it
+pinix registry search my-clip
+
+# Check package details
+pinix registry info @yourscope/my-clip
+
+# Install it (on another machine or after removing local)
+pinix hub add @yourscope/my-clip
+```
