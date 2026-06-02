@@ -1,8 +1,12 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import remarkGfm from "remark-gfm";
 
 export default defineConfig({
   site: "https://docs.pinixai.com",
+  markdown: {
+    remarkPlugins: [remarkGfm],
+  },
   integrations: [
     starlight({
       title: "Pinix",
