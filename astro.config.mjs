@@ -26,6 +26,9 @@ export default defineConfig({
       editLink: {
         baseUrl: "https://github.com/epiral/pinix-docs/edit/main/",
       },
+      components: {
+        EditLink: "./src/components/EditLink.astro",
+      },
       defaultLocale: "root",
       locales: {
         root: {
