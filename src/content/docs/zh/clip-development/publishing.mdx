@@ -104,17 +104,34 @@ my-clip/
 └── .git/             ✗ Excluded
 ```
 
+## Dist-tag 管理
+
+默认发布时版本会标记为 `latest`。你可以管理 dist-tag 来控制不同的发布通道：
+
+```bash
+# 查看包的所有 dist-tag
+pinix registry dist-tag list @yourscope/my-clip
+
+# 给指定版本设置 tag
+pinix registry dist-tag add @yourscope/my-clip@0.2.0 beta
+
+# 发布时指定 tag（不影响 latest）
+pinix registry publish . --tag beta
+```
+
+用户安装时可以指定 tag：`pinix hub add @yourscope/my-clip@beta`
+
 ## 验证已发布的 Clip
 
 发布后，确认它可以访问：
 
 ```bash
-# Search for it
+# 搜索
 pinix registry search my-clip
 
-# Check package details
-pinix registry info @yourscope/my-clip
-
-# Install it (on another machine or after removing local)
+# 安装（在另一台机器上或删除本地后）
 pinix hub add @yourscope/my-clip
+
+# 查看安装后的 Clip 信息
+pinix hub info my-clip
 ```

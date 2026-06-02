@@ -191,8 +191,11 @@ pinix --server http://192.168.1.100:9000 invoke todo list
 | `pinix hub list` | 查看 Clip 列表 | 是 |
 | `pinix hub add @scope/name` | 安装 Clip | 是 |
 | `pinix hub remove <alias>` | 卸载 Clip | 是 |
+| `pinix hub update [alias]` | 更新 Clip 到最新版 | 是 |
+| `pinix hub info <alias>` | 查看 Clip 命令和参数 | 是 |
 | `pinix invoke <alias> <command>` | 调用 Clip | 是 |
-| `pinix upgrade` | 升级 Pinix | 否 |
+| `pinix registry search <query>` | 搜索 Registry | 否 |
+| `pinix upgrade` | 升级 Pinix 自身 | 否 |
 
 ## 从源码构建
 
@@ -211,13 +214,30 @@ curl -fsSL https://bun.sh/install | bash
 npm install -g bb-browser
 ```
 
-## 升级
+## 更新 Clip
+
+```bash
+# 更新单个 Clip 到最新版
+pinix hub update todo
+
+# 更新所有 Registry 安装的 Clip
+pinix hub update --all
+
+# 更新到指定版本
+pinix hub update todo --version 1.2.0
+```
+
+<Aside>
+  只有从 Registry 安装的 Clip（`@scope/name`）支持更新。本地安装和 GitHub 安装的 Clip 需要重新 `hub add`。
+</Aside>
+
+## 升级 Pinix
 
 ```bash
 pinix upgrade
 ```
 
-自动下载最新二进制并更新 bb-browser。
+升级 Pinix 自身的二进制，同时更新 bb-browser。这不影响已安装的 Clip。
 
 ## 下一步
 

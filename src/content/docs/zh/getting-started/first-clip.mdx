@@ -131,13 +131,17 @@ clip.command("research", {
 });
 ```
 
-## 查看命令帮助
-
-每个 Clip 都是自描述的：
+## 查看 Clip 信息
 
 ```bash
-pinix invoke my-clip --help          # 查看所有命令
-pinix invoke my-clip hello --help    # 查看单个命令的参数
+# 查看 Clip 的完整信息（命令、参数、版本等）
+pinix hub info my-clip
+
+# 查看所有命令
+pinix invoke my-clip --help
+
+# 查看单个命令的参数
+pinix invoke my-clip hello --help
 ```
 
 <Aside type="tip">

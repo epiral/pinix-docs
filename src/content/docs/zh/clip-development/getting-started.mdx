@@ -153,6 +153,26 @@ clip.command("research", {
 
 `invoke()` 函数会把请求发送到 Hub，由 Hub 路由到目标 Clip。你的 Clip 不需要知道目标 Clip 在哪里运行。
 
+## 依赖绑定
+
+如果你的 Clip 依赖其他 Clip（在 `clip.json` 的 `dependencies` 中声明），需要用 `bind` 命令将依赖指向具体的 Clip instance：
+
+```bash
+# 查看当前绑定
+pinix hub bindings my-clip
+
+# 绑定依赖：将 "browser" slot 绑定到 "browser" alias
+pinix hub bind my-clip browser browser
+
+# 解除绑定
+pinix hub unbind my-clip browser
+
+# 列出满足某个 slot 依赖的已安装 Clip
+pinix hub bind my-clip browser --list
+```
+
+绑定信息存储在 Clip 侧（`bindings.json`），不在 Hub 中。
+
 ## 添加 Web UI
 
 在你的 Clip 项目中创建一个包含 `index.html` 的 `web/` 目录：
