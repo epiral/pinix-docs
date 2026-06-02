@@ -8,7 +8,7 @@ description: "Pinix 生态中关键术语的定义。"
 | **Clip** | 能力单元，由 (hub, alias) 标识。包含 Knowledge（manifest）+ Capability（执行逻辑）+ Asset（可组合） | 不是 plugin，也不是 MCP tool |
 | **SDK Clip** | 由 Runtime 管理、使用 TypeScript 编写、通过 `pinix hub add` 安装的 Clip | 不是 Edge Clip |
 | **Edge Clip** | 绑定硬件/OS API，并自行实现 Provider 协议的 Clip | 不是 SDK Clip |
-| **Builtin Clip** | 在 `pinixd` 进程内运行的 Clip（Go），通过 `builtin.Registry` 注册 | 不是 SDK Clip，没有 IPC |
+| **Builtin Clip** | 在 pinix daemon 进程内运行的 Clip（Go），通过 `builtin.Registry` 注册 | 不是 SDK Clip，没有 IPC |
 | **Hub** | 路由中心 —— 管理 alias 分配和 invoke 路由。单一事实来源 | 不管理 Clip 生命周期 |
 | **Provider** | 连接协议（ProviderStream）—— 注册 Clip 并转发调用 | 不等同于 Runtime |
 | **Runtime** | 生命周期管理器（RuntimeStream）—— 安装、启动、停止 SDK Clip | 不是 Provider（虽然它会扮演 Provider），不负责路由 |
@@ -19,8 +19,8 @@ description: "Pinix 生态中关键术语的定义。"
 | **Binding** | Clip 侧的 slot → alias 映射（存储在 `bindings.json` 中） | 不存在于 Hub 侧 |
 | **Manifest** | 机器可读的 Clip 描述：commands、patterns、entities、input schemas | 不只是 description string |
 | **Portal / Console** | 用于管理 Clip、与 Agent 聊天、浏览 Marketplace 的 Web UI | 不是 Agent Runtime，不运行 LLM |
-| **Agent Runtime** | LLM 执行引擎（Go）。本地：pinixd 中的 builtin Clip `agent`。云端：pinix-api `/ai/*` | 概念上不是 Clip，虽然会注册为 Clip |
-| **Scheduler** | 基于 cron 的任务调度器，pinixd 中的 builtin Clip | 不是单独的服务 |
+| **Agent Runtime** | LLM 执行引擎（Go）。本地：pinix daemon 中的 builtin Clip `agent`。云端：pinix-api `/ai/*` | 概念上不是 Clip，虽然会注册为 Clip |
+| **Scheduler** | 基于 cron 的任务调度器，pinix daemon 中的 builtin Clip | 不是单独的服务 |
 | **Registry** | Clip 的 package repository。用 `pinix registry publish` 发布，用 `pinix hub add` 安装 | 不是 npm |
 | **Marketplace** | 用于发现共享 Clip 的平台（运行中的实例，不是代码 package） | 不等同于 Registry |
 | **SharedClip** | 用户通过 Cloud Hub 暴露给其他用户的运行中 Clip instance。访问模式包括：public、unlisted、private、token | 不是代码分发 |

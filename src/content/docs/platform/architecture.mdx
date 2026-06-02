@@ -158,7 +158,7 @@ These rules are architectural laws — violating any one is a bug:
 1. **Hub is the only router.** All invocations go through Hub.
 2. **Bindings live on the Clip side**, not in the Hub.
 3. **Single Hub interface.** Local and Cloud Hub implement the same `HubServiceHandler`.
-4. **pinixd never exits on network errors.** Disconnected streams auto-reconnect with backoff.
+4. **pinix daemon never exits on network errors.** Disconnected streams auto-reconnect with backoff.
 5. **All runtime state transitions must be logged.** Silent failures are bugs.
 
 See [Core Concepts](/concepts/) for the full list.

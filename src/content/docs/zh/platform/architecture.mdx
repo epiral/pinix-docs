@@ -158,7 +158,7 @@ Runtime 通过 stdin/stdout 上的 **NDJSON**（newline-delimited JSON）与 SDK
 1. **Hub 是唯一路由器。** 所有调用都经过 Hub。
 2. **Binding 位于 Clip 侧**，不在 Hub 中。
 3. **单一 Hub interface。** 本地 Hub 和 Cloud Hub 实现同一个 `HubServiceHandler`。
-4. **pinixd 永远不会因网络错误退出。** 断开的 stream 会使用退避策略自动重连。
+4. **pinix daemon 永远不会因网络错误退出。** 断开的 stream 会使用退避策略自动重连。
 5. **所有 runtime 状态转换都必须记录日志。** 静默失败就是 bug。
 
 参见 [核心概念](/zh/concepts/) 了解完整列表。

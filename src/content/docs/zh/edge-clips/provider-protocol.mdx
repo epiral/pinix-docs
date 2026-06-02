@@ -106,7 +106,7 @@ Hub 会分配 alias（如果建议的 alias 可用，也会直接采用），并
 Hub 会定期发送 heartbeat 消息（默认每 30 秒一次）。Provider 必须在超时时间内响应。如果 Provider 错过 heartbeat，Hub 会将它的 Clip 标记为离线，并从路由表中移除。
 
 <Aside type="caution">
-  **必须重连。** 如果 ProviderStream 断开，Provider 必须使用指数退避自动重连。`pinixd` 永远不会因网络错误退出 —— 这是设计不变量。
+  **必须重连。** 如果 ProviderStream 断开，Provider 必须使用指数退避自动重连。pinix daemon 永远不会因网络错误退出 —— 这是设计不变量。
 </Aside>
 
 ## 认证

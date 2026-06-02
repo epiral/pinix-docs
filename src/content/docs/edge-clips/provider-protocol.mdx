@@ -106,7 +106,7 @@ When a client invokes a Clip, the Hub:
 The Hub sends periodic heartbeat messages (default: every 30 seconds). The Provider must respond within the timeout window. If a Provider misses heartbeats, the Hub marks its Clips as offline and removes them from the routing table.
 
 <Aside type="caution">
-  **Reconnection is mandatory.** If the ProviderStream disconnects, the Provider must automatically reconnect with exponential backoff. `pinixd` never exits due to network errors — this is a design invariant.
+  **Reconnection is mandatory.** If the ProviderStream disconnects, the Provider must automatically reconnect with exponential backoff. pinix daemon never exits due to network errors — this is a design invariant.
 </Aside>
 
 ## Authentication

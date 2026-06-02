@@ -104,23 +104,6 @@ pinix invoke hackernews top --jq '.items[:3].title'
   Chrome 以 **headed mode** 运行（不是 headless），以避免反自动化检测。在 macOS 上它会离屏渲染；在 Linux 上，Xvfb 提供虚拟显示。
 </Aside>
 
-## MCP 集成
-
-BB-Browser 也可以作为独立 MCP server 使用：
-
-```json
-{
-  "mcpServers": {
-    "bb-browser": {
-      "command": "bb-browser-daemon",
-      "args": ["--mcp"]
-    }
-  }
-}
-```
-
-也可以通过 Pinix 的 Hub MCP 使用它，让所有平台和你的其他 Clip 一起可用。
-
 ## 架构
 
 BB-Browser 包含三个组件：

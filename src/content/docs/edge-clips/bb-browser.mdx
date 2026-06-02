@@ -104,23 +104,6 @@ Platforms that don't require login (HackerNews, Wikipedia, Google) work immediat
   Chrome runs in **headed mode** (not headless) to avoid anti-automation detection. On macOS it renders offscreen; on Linux, Xvfb provides a virtual display.
 </Aside>
 
-## MCP integration
-
-BB-Browser works as a standalone MCP server too:
-
-```json
-{
-  "mcpServers": {
-    "bb-browser": {
-      "command": "bb-browser-daemon",
-      "args": ["--mcp"]
-    }
-  }
-}
-```
-
-Or use it through Pinix's Hub MCP to get all platforms alongside your other Clips.
-
 ## Architecture
 
 BB-Browser has three components:
