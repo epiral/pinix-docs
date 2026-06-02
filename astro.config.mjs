@@ -1,6 +1,7 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import remarkGfm from "remark-gfm";
+import plantuml from "astro-plantuml";
 
 export default defineConfig({
   site: "https://docs.pinixai.com",
@@ -176,5 +177,6 @@ export default defineConfig({
       ],
       customCss: ["./src/styles/custom.css"],
     }),
+    plantuml(),
   ],
 });
