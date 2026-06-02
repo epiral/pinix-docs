@@ -1,45 +1,72 @@
 ---
 title: Local Installation
-description: "Install the pinix daemon and run Clips locally."
+description: "Install the pinix daemon locally to run Clips, or install only the CLI for remote access."
 ---
 
-import { Aside, Steps } from "@astrojs/starlight/components";
+import { Aside, Steps, Tabs, TabItem } from "@astrojs/starlight/components";
 
-To run Clips locally, install the pinix daemon.
+Pinix offers two installation modes, depending on your use case:
+
+| Installation mode | Best for | What it installs |
+|-------------------|----------|------------------|
+| **Full installation** | People who want to run Clips on this machine | daemon + CLI + browser engine + runtime |
+| **CLI-only** | People who want to invoke other people's Clips remotely | Only the `pinix` CLI |
+
+A typical setup is to fully install Pinix on one server to run the daemon and Clips, while everyone else on the team installs CLI-only on their own machines for remote access. Or, if you are already using the [pinixai.com Cloud Agent](/getting-started/), you can install only the CLI so Clips are available from your terminal too.
 
 ## System Requirements
 
-| | Supported |
-|---|---|
-| **Operating system** | macOS, Linux |
-| **Architecture** | arm64 (Apple Silicon, ARM servers), amd64 (Intel/AMD) |
+| | macOS | Linux | Windows |
+|---|---|---|---|
+| **Full installation** | arm64 / amd64 | arm64 / amd64 | amd64 |
+| **CLI-only** | arm64 / amd64 | arm64 / amd64 | amd64 |
 
-<Aside>
-  Windows is not supported yet. You can use [Docker](#docker) or WSL2.
-</Aside>
+## Full Installation
 
-## Installation
+Install the daemon and all dependencies to run Clips on this machine.
+
+<Tabs>
+  <TabItem label="macOS / Linux">
+
+```bash
+curl -fsSL dl.pinixai.com/install.sh | sh
+```
+
+  </TabItem>
+  <TabItem label="Windows (PowerShell)">
+
+```powershell
+irm dl.pinixai.com/install.ps1 | iex
+```
+
+  </TabItem>
+  <TabItem label="Docker">
+
+```bash
+docker run -d --shm-size=2g lueco/pinix <your-hub-token>
+```
+
+Get the Hub token from [pinixai.com/settings](https://pinixai.com/settings). The image includes all components.
+
+  </TabItem>
+</Tabs>
+
+Components installed automatically:
+
+| Component | Purpose |
+|-----------|---------|
+| `pinix` | CLI + daemon (single binary) |
+| Node.js | Runtime dependency, installed automatically if missing |
+| Bun | Clip runtime for running TypeScript Clips |
+| bb-browser | Browser automation Edge Clip |
+
+Chrome is downloaded automatically the first time the daemon starts.
+
+### Start
 
 <Steps>
 
-1. **Install with one command**
-
-   ```bash
-   curl -fsSL dl.pinixai.com/install.sh | sh
-   ```
-
-   This installs automatically:
-
-   | Component | Purpose |
-   |-----------|---------|
-   | `pinix` | CLI + daemon (single binary) |
-   | Node.js | Runtime dependency (installed automatically through fnm if missing) |
-   | Bun | Clip runtime, used to run TypeScript Clips |
-   | bb-browser | Browser automation Edge Clip |
-
-   Chrome is downloaded automatically the first time the daemon starts.
-
-2. **Start the daemon**
+1. **Start the daemon**
 
    ```bash
    pinix start
@@ -47,73 +74,92 @@ To run Clips locally, install the pinix daemon.
 
    The daemon starts on port :9000 and automatically starts Chrome and bb-browser.
 
-3. **Log in**
+2. **Log in**
 
    ```bash
    pinix login
    ```
 
-   This opens your browser for authorization. After login, the daemon automatically connects to the Cloud Hub, so your local Clips can also be accessed from the cloud.
+   This opens your browser for authorization. After login, the daemon automatically connects to the Cloud Hub. Your local Clips become accessible from the cloud, and you can use Clips shared by others.
 
    <Aside type="tip">
-     You can also log in with a token: `pinix login --token pnx_...` (get the token from [pinixai.com/settings](https://pinixai.com/settings)).
+     You can also log in with a token: `pinix login --token pnx_...` (get it from [pinixai.com/settings](https://pinixai.com/settings)).
    </Aside>
 
-4. **Open the Console**
+3. **Start using Pinix**
 
    ```bash
+   # 查看可用的 Clip
+   pinix hub list
+
+   # bb-browser 的平台 Clip 已自动注册
+   pinix invoke hackernews top
+   pinix invoke google search "pinix ai agent"
+
+   # 安装更多 Clip
+   pinix hub add @pinix/todo
+   pinix invoke todo list
+
+   # 打开本地 Console
    open http://localhost:9000
    ```
 
-   The local Console has the same features as the cloud Console, but all Clips run on your machine.
-
 </Steps>
 
-## Try It
+## CLI-only Installation
 
-After startup, the bb-browser platform Clips are already registered:
+Install only the `pinix` command-line tool, without starting a daemon or installing runtimes. Use it to invoke other people's Clips through a remote Hub.
+
+<Tabs>
+  <TabItem label="macOS / Linux">
 
 ```bash
-# 查看可用的 Clip
-pinix hub list
+curl -fsSL dl.pinixai.com/install.sh | sh -s -- --cli
+```
 
-# 搜索 HackerNews
-pinix invoke hackernews top
+  </TabItem>
+  <TabItem label="Windows (PowerShell)">
 
-# 搜索 Google
-pinix invoke google search "pinix ai agent"
+```powershell
+irm dl.pinixai.com/install.ps1 | iex  # 选择 CLI-only 模式
+```
 
-# 安装一个 Clip
-pinix hub add @pinix/todo
+  </TabItem>
+</Tabs>
 
-# 使用它
+After installation, specify a remote Hub address with `--server` to invoke Clips:
+
+```bash
+# 调用远程 daemon 上的 Clip
+pinix --server http://192.168.1.100:9000 hub list
+pinix --server http://192.168.1.100:9000 invoke todo list
+
+# 或者登录后通过 Cloud Hub 调用
+pinix login
 pinix invoke todo list
 ```
 
+<Aside type="tip">
+  CLI-only is a good fit for these cases:
+  - A team shares one daemon server, and everyone else only needs CLI access
+  - Invoking Clips in CI/CD
+  - Using Clips remotely from lightweight devices
+  - Invoking Clips running on macOS/Linux remotely from Windows
+</Aside>
+
 ## Common Commands
 
-| Command | Description |
-|---------|-------------|
-| `pinix start` | Start the daemon |
-| `pinix stop` | Stop the daemon |
-| `pinix hub list` | View installed Clips |
-| `pinix hub add @scope/name` | Install a Clip |
-| `pinix hub remove <alias>` | Uninstall a Clip |
-| `pinix invoke <alias> <command>` | Invoke a Clip |
-| `pinix upgrade` | Upgrade Pinix |
-| `pinix whoami` | Check login status |
-
-## Docker
-
-If you do not want to install anything on the host machine, use Docker:
-
-```bash
-docker run -d --shm-size=2g lueco/pinix <your-hub-token>
-```
-
-The image includes pinix, Bun, Node.js, bb-browser, Chrome, and Xvfb. After startup, it logs in automatically and runs the daemon.
-
-Get the Hub token from [pinixai.com/settings](https://pinixai.com/settings).
+| Command | Description | Requires daemon |
+|---------|-------------|:---------------:|
+| `pinix start` | Start the daemon | — |
+| `pinix stop` | Stop the daemon | — |
+| `pinix login` | Log in | No |
+| `pinix whoami` | Check login status | No |
+| `pinix hub list` | View the Clip list | Yes |
+| `pinix hub add @scope/name` | Install a Clip | Yes |
+| `pinix hub remove <alias>` | Uninstall a Clip | Yes |
+| `pinix invoke <alias> <command>` | Invoke a Clip | Yes |
+| `pinix upgrade` | Upgrade Pinix | No |
 
 ## Build from Source
 
