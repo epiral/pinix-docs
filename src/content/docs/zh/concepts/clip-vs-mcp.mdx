@@ -52,12 +52,48 @@ MCP Tool 之间是隔离的。你的 Twitter Tool 不能调用你的 Browser Too
 
 Clip 可以互相调用——Twitter Clip 可以直接调用 Browser Clip，不需要 Agent 参与中间步骤。
 
-```
-MCP: Agent 编排每一步
-  Agent → Tool A → Agent → Tool B → Agent → Tool C
+```plantuml
+@startuml
+skinparam backgroundColor transparent
+skinparam defaultFontName Inter
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam sequence {
+  ArrowColor #6D28D9
+  LifeLineBorderColor #6D28D9
+  ParticipantBorderColor #6D28D9
+  ParticipantBackgroundColor #F5F3FF
+  ParticipantFontColor #1E1B4B
+  DividerBackgroundColor #EDE9FE
+  DividerFontColor #1E1B4B
+}
 
-Clip: Clip 内部组合
-  Agent → Clip A → (内部调用 Clip B) → 结果
+participant Agent
+participant "Tool A" as TA
+participant "Tool B" as TB
+participant "Tool C" as TC
+
+== MCP: Agent 编排每一步 ==
+
+Agent -> TA : 调用
+TA --> Agent : 结果
+Agent -> TB : 调用
+TB --> Agent : 结果
+Agent -> TC : 调用
+TC --> Agent : 结果
+
+== Clip: 内部组合 ==
+
+participant "Clip A" as CA
+participant "Clip B" as CB
+
+Agent -> CA : 调用
+CA -> CB : 内部调用
+CB --> CA : 结果
+CA --> Agent : 最终结果
+
+@enduml
 ```
 
 更少的往返，更省 token，Agent 不需要理解中间细节。

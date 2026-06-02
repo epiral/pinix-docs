@@ -13,15 +13,34 @@ import { Aside } from "@astrojs/starlight/components";
 
 Hub 不关心 Clip 是怎么实现的——TypeScript、Go、原生程序都一样。对 Hub 来说，它们都是带有 alias 和命令的 Clip。
 
-```
-CLI ──────────►  ┌─────────────────┐
-Console ──────►  │      Hub        │
-Agent ────────►  │                 │
-                 │  路由表：        │
-                 │  todo → Clip A  │
-                 │  google → Clip B│
-                 │  agent → Clip C │
-                 └─────────────────┘
+```plantuml
+@startuml
+skinparam backgroundColor transparent
+skinparam defaultFontName Inter
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam component {
+  BorderColor #6D28D9
+  BackgroundColor #F5F3FF
+  FontColor #1E1B4B
+}
+
+actor CLI
+actor Console
+actor Agent
+
+component "Hub" as hub #EDE9FE {
+  component "todo → Clip A" as r1 #FAFAFE
+  component "google → Clip B" as r2 #FAFAFE
+  component "agent → Clip C" as r3 #FAFAFE
+}
+
+CLI --> hub
+Console --> hub
+Agent --> hub
+
+@enduml
 ```
 
 没有类型分支，没有特殊情况。
@@ -57,10 +76,34 @@ Pinix 有两种 Hub：
 
 ## 调用流程
 
-```
-Client → Hub → Provider → Clip instance
-                                │
-Client ← Hub ← Provider ← 结果
+```plantuml
+@startuml
+skinparam backgroundColor transparent
+skinparam defaultFontName Inter
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam sequence {
+  ArrowColor #6D28D9
+  LifeLineBorderColor #6D28D9
+  ParticipantBorderColor #6D28D9
+  ParticipantBackgroundColor #F5F3FF
+  ParticipantFontColor #1E1B4B
+}
+
+participant Client
+participant Hub
+participant Provider
+participant "Clip Instance" as Clip
+
+Client -> Hub : invoke
+Hub -> Provider : 转发
+Provider -> Clip : 执行
+Clip --> Provider : 结果
+Provider --> Hub : 返回
+Hub --> Client : 响应
+
+@enduml
 ```
 
 1. Client（CLI / Console / Agent）向 Hub 发请求

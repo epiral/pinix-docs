@@ -13,15 +13,34 @@ When you run `pinix invoke todo list`, the CLI sends the request to the Hub. The
 
 The Hub does not care how a Clip is implemented. TypeScript, Go, and native programs are all the same to the Hub. They are Clips with aliases and commands.
 
-```
-CLI ──────────►  ┌─────────────────┐
-Console ──────►  │      Hub        │
-Agent ────────►  │                 │
-                 │  路由表：        │
-                 │  todo → Clip A  │
-                 │  google → Clip B│
-                 │  agent → Clip C │
-                 └─────────────────┘
+```plantuml
+@startuml
+skinparam backgroundColor transparent
+skinparam defaultFontName Inter
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam component {
+  BorderColor #6D28D9
+  BackgroundColor #F5F3FF
+  FontColor #1E1B4B
+}
+
+actor CLI
+actor Console
+actor Agent
+
+component "Hub" as hub #EDE9FE {
+  component "todo -> Clip A" as r1 #FAFAFE
+  component "google -> Clip B" as r2 #FAFAFE
+  component "agent -> Clip C" as r3 #FAFAFE
+}
+
+CLI --> hub
+Console --> hub
+Agent --> hub
+
+@enduml
 ```
 
 No type branches. No special cases.
@@ -57,10 +76,34 @@ After `pinix login`, the daemon connects to the Cloud Hub as a Provider. Your lo
 
 ## Invocation Flow
 
-```
-Client → Hub → Provider → Clip instance
-                                │
-Client ← Hub ← Provider ← 结果
+```plantuml
+@startuml
+skinparam backgroundColor transparent
+skinparam defaultFontName Inter
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam sequence {
+  ArrowColor #6D28D9
+  LifeLineBorderColor #6D28D9
+  ParticipantBorderColor #6D28D9
+  ParticipantBackgroundColor #F5F3FF
+  ParticipantFontColor #1E1B4B
+}
+
+participant Client
+participant Hub
+participant Provider
+participant "Clip Instance" as Clip
+
+Client -> Hub : invoke
+Hub -> Provider : Forward
+Provider -> Clip : Execute
+Clip --> Provider : Result
+Provider --> Hub : Return
+Hub --> Client : Response
+
+@enduml
 ```
 
 1. The Client (CLI / Console / Agent) sends a request to the Hub

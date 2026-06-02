@@ -32,16 +32,38 @@ Clip 有两层含义，类似 Docker 中镜像和容器的关系：
 
 Clip 封装了 Agent 需要的能力。它不是一个简单的函数——它是一个完整的应用，有自己的命令、逻辑和状态。
 
-```
-用户："帮我搜一下推特上 AI 的热门"
-  │
-Agent 读取 Clip manifest → twitter clip 有 search 命令
-  │
-Agent 调用 twitter.search → Hub 路由 → Clip 执行
-  │
-Clip 内部：打开浏览器 → 导航到 Twitter → 提取结果 → 返回结构化数据
-  │
-Agent 把结果展示给用户
+```plantuml
+@startuml
+skinparam backgroundColor transparent
+skinparam defaultFontName Inter
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam sequence {
+  ArrowColor #6D28D9
+  LifeLineBorderColor #6D28D9
+  ParticipantBorderColor #6D28D9
+  ParticipantBackgroundColor #F5F3FF
+  ParticipantFontColor #1E1B4B
+  ActorBorderColor #6D28D9
+  ActorBackgroundColor #F5F3FF
+}
+
+actor 用户
+participant Agent
+participant Hub
+participant "Twitter Clip" as Clip
+
+用户 -> Agent : "帮我搜一下推特上 AI 的热门"
+Agent -> Agent : 读取 manifest\n→ twitter clip 有 search 命令
+Agent -> Hub : invoke twitter.search
+Hub -> Clip : 转发请求
+Clip -> Clip : 打开浏览器\n导航到 Twitter\n提取结果
+Clip --> Hub : 返回结构化数据
+Hub --> Agent : 结果
+Agent --> 用户 : 展示搜索结果
+
+@enduml
 ```
 
 Agent 不需要知道怎么操作浏览器、怎么解析页面、怎么处理登录——这些复杂逻辑全在 Clip 里。Clip 让 Agent 变得更强大，同时不需要更强的模型。

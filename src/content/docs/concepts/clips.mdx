@@ -32,16 +32,38 @@ When you run `pinix hub add @pinix/todo`:
 
 A Clip packages the capabilities an Agent needs. It is not just a simple function. It is a complete application with its own commands, logic, and state.
 
-```
-用户："帮我搜一下推特上 AI 的热门"
-  │
-Agent 读取 Clip manifest → twitter clip 有 search 命令
-  │
-Agent 调用 twitter.search → Hub 路由 → Clip 执行
-  │
-Clip 内部：打开浏览器 → 导航到 Twitter → 提取结果 → 返回结构化数据
-  │
-Agent 把结果展示给用户
+```plantuml
+@startuml
+skinparam backgroundColor transparent
+skinparam defaultFontName Inter
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam sequence {
+  ArrowColor #6D28D9
+  LifeLineBorderColor #6D28D9
+  ParticipantBorderColor #6D28D9
+  ParticipantBackgroundColor #F5F3FF
+  ParticipantFontColor #1E1B4B
+  ActorBorderColor #6D28D9
+  ActorBackgroundColor #F5F3FF
+}
+
+actor User
+participant Agent
+participant Hub
+participant "Twitter Clip" as Clip
+
+User -> Agent : "Search Twitter for popular AI posts"
+Agent -> Agent : Read manifest\n-> twitter clip has search command
+Agent -> Hub : invoke twitter.search
+Hub -> Clip : Forward request
+Clip -> Clip : Open browser\nNavigate to Twitter\nExtract results
+Clip --> Hub : Return structured data
+Hub --> Agent : Results
+Agent --> User : Show search results
+
+@enduml
 ```
 
 The Agent does not need to know how to operate the browser, parse the page, or handle login. All of that complex logic lives inside the Clip. Clips make Agents more capable without requiring stronger models.

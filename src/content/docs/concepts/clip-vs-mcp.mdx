@@ -52,12 +52,48 @@ MCP Tools are isolated. Your Twitter Tool cannot invoke your Browser Tool. For m
 
 Clips can invoke each other. A Twitter Clip can call a Browser Clip directly, without involving the Agent in the intermediate steps.
 
-```
-MCP: Agent 编排每一步
-  Agent → Tool A → Agent → Tool B → Agent → Tool C
+```plantuml
+@startuml
+skinparam backgroundColor transparent
+skinparam defaultFontName Inter
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam sequence {
+  ArrowColor #6D28D9
+  LifeLineBorderColor #6D28D9
+  ParticipantBorderColor #6D28D9
+  ParticipantBackgroundColor #F5F3FF
+  ParticipantFontColor #1E1B4B
+  DividerBackgroundColor #EDE9FE
+  DividerFontColor #1E1B4B
+}
 
-Clip: Clip 内部组合
-  Agent → Clip A → (内部调用 Clip B) → 结果
+participant Agent
+participant "Tool A" as TA
+participant "Tool B" as TB
+participant "Tool C" as TC
+
+== MCP: Agent orchestrates each step ==
+
+Agent -> TA : Invoke
+TA --> Agent : Result
+Agent -> TB : Invoke
+TB --> Agent : Result
+Agent -> TC : Invoke
+TC --> Agent : Result
+
+== Clip: Internal composition ==
+
+participant "Clip A" as CA
+participant "Clip B" as CB
+
+Agent -> CA : Invoke
+CA -> CB : Internal call
+CB --> CA : Result
+CA --> Agent : Final result
+
+@enduml
 ```
 
 Fewer round trips, fewer tokens, and the Agent does not need to understand the intermediate details.

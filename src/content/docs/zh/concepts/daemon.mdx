@@ -28,14 +28,47 @@ daemon 同时是一个 Provider——它管理本地 Clip 的生命周期：
 - 监控进程健康，crash 自动重启
 - 把 Clip 注册到 Hub，让它们可被发现和调用
 
-```
-pinix daemon
-├── Local Hub (:9000)
-│   └── 路由表：alias → Clip instance
-└── Provider
-    ├── todo (Bun 进程)
-    ├── twitter (Bun 进程)
-    └── ...
+```plantuml
+@startuml
+skinparam backgroundColor transparent
+skinparam defaultFontName Inter
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam componentStyle rectangle
+skinparam component {
+  BorderColor #6D28D9
+  BackgroundColor #F5F3FF
+  FontColor #1E1B4B
+}
+skinparam package {
+  BorderColor #6D28D9
+  BackgroundColor #FAFAFE
+  FontColor #1E1B4B
+}
+
+package "pinix daemon" {
+  component "Local Hub (:9000)" as hub {
+  }
+  component "Provider" as provider {
+  }
+}
+
+component "todo" as todo #EDE9FE
+component "twitter" as twitter #EDE9FE
+component "bb-browser" as bb #EDE9FE
+
+provider --> todo
+provider --> twitter
+provider --> bb
+provider -> hub : 注册 Clip
+
+actor CLI
+actor Console
+CLI --> hub
+Console --> hub
+
+@enduml
 ```
 
 ## 连接 Cloud Hub
@@ -45,15 +78,41 @@ pinix daemon
 - **你的本地 Clip 从云端可访问**——在其他设备的 Console 里也能看到和调用
 - **你可以使用别人共享的 Clip**——通过 Marketplace 添加的共享 Clip，调用会路由到对方的 daemon
 
-```
-┌──────────────────┐              ┌──────────────────┐
-│   你的机器        │              │    Cloud Hub      │
-│                  │              │                   │
-│  daemon :9000    │◄────────────►│  hub.pinixai.com  │
-│  ├─ todo         │  Provider    │                   │
-│  ├─ twitter      │  Stream      │  其他人的 Clip     │
-│  └─ browser      │              │  也在这里          │
-└──────────────────┘              └──────────────────┘
+```plantuml
+@startuml
+skinparam backgroundColor transparent
+skinparam defaultFontName Inter
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam node {
+  BorderColor #6D28D9
+  BackgroundColor #F5F3FF
+  FontColor #1E1B4B
+}
+skinparam cloud {
+  BorderColor #6D28D9
+  BackgroundColor #EDE9FE
+  FontColor #1E1B4B
+}
+
+node "你的机器" {
+  component "daemon :9000" as daemon
+  component "todo" as todo #FAFAFE
+  component "twitter" as twitter #FAFAFE
+  component "browser" as browser #FAFAFE
+  daemon --> todo
+  daemon --> twitter
+  daemon --> browser
+}
+
+cloud "Cloud Hub\nhub.pinixai.com" as cloud {
+  component "其他人的 Clip" as others #FAFAFE
+}
+
+daemon <--> cloud : Provider\nStream
+
+@enduml
 ```
 
 <Aside type="tip">
