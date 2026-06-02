@@ -1,0 +1,86 @@
+---
+title: 发布与共享
+description: "把你的 Clip 发布到 Registry，或者共享给其他用户使用。"
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+Clip 有两种方式分享给别人：**发布**和**共享**。
+
+## 发布 vs 共享
+
+| | 发布（Publish） | 共享（Share） |
+|---|---|---|
+| 什么意思 | 把代码上传到 Registry | 把正在运行的 Clip 实例暴露给其他用户 |
+| 别人怎么用 | `pinix hub add @scope/name`，在他自己的机器上运行 | 通过 Cloud Hub 远程调用，Clip 跑在你的机器上 |
+| 代码归属 | 代码在 Registry，别人下载后自己跑 | 代码在你手里，别人只能调用 |
+| 收费 | 不直接支持 | 可以设置按次计费（Credit） |
+
+## 发布到 Registry
+
+<Steps>
+
+1. **确认登录**
+
+   ```bash
+   pinix registry whoami
+   # → @yourscope
+   ```
+
+2. **检查 clip.json**
+
+   ```json
+   {
+     "name": "@yourscope/my-clip",
+     "version": "0.1.0",
+     "description": "我的 Clip 做什么",
+     "main": "src/index.ts"
+   }
+   ```
+
+3. **发布**
+
+   ```bash
+   pinix registry publish .
+   ```
+
+</Steps>
+
+发布后，任何人都可以通过 `pinix hub add @yourscope/my-clip` 安装你的 Clip。
+
+<Aside type="caution">
+  版本号不能重复。每次发布需要更新 `clip.json` 中的 `version`。
+</Aside>
+
+## 共享 Clip
+
+共享是在 Console 里操作的：
+
+<Steps>
+
+1. 进入 Console 的 **Sharing** 页面
+2. 选择你本地正在运行的 Clip
+3. 设置共享名、标签、描述、访问模式
+4. 发布
+
+</Steps>
+
+共享后，你的 Clip 会出现在 Marketplace 中（如果选择了 public 模式）。其他用户可以 Add 并使用，调用请求会通过 Cloud Hub 路由到你的 daemon。
+
+### 访问模式
+
+| 模式 | 说明 |
+|------|------|
+| **public** | Marketplace 可见，任何人可以添加 |
+| **unlisted** | 不在 Marketplace 显示，但有链接就可以访问 |
+| **private** | 需要授权才能访问 |
+| **token** | 需要共享 token 才能订阅 |
+
+### 按次计费
+
+共享 Clip 可以设置每次调用的价格（以 Credit 计价）。用户每调用一次，你获得相应的 Credit。
+
+## 下一步
+
+- [了解核心概念](/zh/concepts/)
+- [Clip 开发详细指南](/zh/clip-development/getting-started/)

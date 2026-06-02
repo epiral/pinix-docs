@@ -1,55 +1,48 @@
 ---
 title: Core Concepts
-description: Understand the five key concepts behind Pinix — and how they work together to give AI Agents real-world capabilities.
+description: "Understand the core Pinix concepts: Clip, pinix daemon, and Hub."
 ---
 
-import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+import { LinkCard, CardGrid } from "@astrojs/starlight/components";
 
-Pinix lets AI Agents use any capability on any device. Instead of building complex tool pipelines for each Agent, you install **Clips** — self-contained capability units that any Agent can discover and invoke through a **Hub**.
+## What Is Pinix?
 
-Understand these five concepts and you understand Pinix.
+Pinix is an **Agent Application OS** — an application operating system for AI Agents.
 
-## How it fits together
+The bottleneck for AI is not the model itself, but the ability to use the model. Most people do not know how to configure tools for AI, break down tasks, or correct mistakes. Pinix solves this through the **Clip** ecosystem: install a Clip, and your Agent gains a new capability.
+
+Just as phones use an App Store and an operating system to manage Apps, Pinix uses the Registry/Marketplace and the pinix daemon to manage Clips.
 
 ```
-User ──► Agent ──► Hub ──────► Clip (SDK)
-                    │             ↑
-                    │          Runtime (manages lifecycle)
-                    │
-                    └────────► Clip (Edge)
-                                 ↑
-                              Provider Protocol
-                              (bb-browser, clip-dock, ...)
+手机：    App Store  +  iOS/Android  +  App
+Pinix：  Marketplace +  pinix daemon +  Clip
 ```
 
-The **Agent** understands what the user wants. The **Hub** routes the request to the right **Clip**. The Clip executes the actual work — whether that's searching Twitter, managing a to-do list, or controlling a browser.
-
-**SDK Clips** are TypeScript packages managed by the Runtime. **Edge Clips** bind directly to hardware or OS APIs through the Provider protocol.
+## Core Concepts
 
 <CardGrid>
   <LinkCard
-    title="Clips"
-    description="The core abstraction: Knowledge + Capability + Asset in one unit."
+    title="Clip"
+    description="An App for Agents. Install one, and your Agent gains a new capability."
     href="/concepts/clips/"
   />
   <LinkCard
-    title="Hub & Routing"
-    description="The single router that connects Agents to Clips."
-    href="/concepts/hub-and-routing/"
+    title="Pinix Daemon"
+    description="The runtime environment for Clips. It runs Clips on your machine and provides a Local Hub."
+    href="/concepts/daemon/"
   />
   <LinkCard
-    title="Providers & Edge Clips"
-    description="How devices expose capabilities to Agents."
-    href="/concepts/providers-and-edge/"
+    title="Hub"
+    description="Where Clips are discovered and invoked."
+    href="/concepts/hub/"
   />
   <LinkCard
-    title="Agent & Clips"
-    description="Agent thin, Clip thick — why this changes everything."
-    href="/concepts/agent-and-clips/"
-  />
-  <LinkCard
-    title="Clips vs MCP vs GPTs"
-    description="How Clips compare to other tool frameworks."
-    href="/concepts/clips-vs-mcp/"
+    title="Clip vs MCP & CLI"
+    description="How Clips differ from MCP Tools and traditional CLI tools."
+    href="/concepts/clip-vs-mcp/"
   />
 </CardGrid>
+
+## In One Sentence
+
+> A user tells an **Agent** what they need, the Agent finds the right **Clip** from the **Hub** to complete the task, and the Clip runs on the **pinix daemon**. Install more Clips, and the Agent can do more.

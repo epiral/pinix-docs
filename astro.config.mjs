@@ -34,6 +34,32 @@ export default defineConfig({
       },
       sidebar: [
         {
+          label: "Getting Started",
+          translations: { "zh-CN": "快速上手" },
+          items: [
+            {
+              slug: "getting-started",
+              label: "Start with Cloud",
+              translations: { "zh-CN": "云端使用" },
+            },
+            {
+              slug: "getting-started/installation",
+              label: "Local Installation",
+              translations: { "zh-CN": "本地安装" },
+            },
+            {
+              slug: "getting-started/first-clip",
+              label: "Your First Clip",
+              translations: { "zh-CN": "开发第一个 Clip" },
+            },
+            {
+              slug: "getting-started/publishing",
+              label: "Publish & Share",
+              translations: { "zh-CN": "发布与共享" },
+            },
+          ],
+        },
+        {
           label: "Core Concepts",
           translations: { "zh-CN": "核心概念" },
           items: [
@@ -45,53 +71,22 @@ export default defineConfig({
             {
               slug: "concepts/clips",
               label: "Clips",
-              translations: { "zh-CN": "Clip 能力单元" },
+              translations: { "zh-CN": "Clip" },
             },
             {
-              slug: "concepts/hub-and-routing",
-              label: "Hub & Routing",
-              translations: { "zh-CN": "Hub 与路由" },
+              slug: "concepts/daemon",
+              label: "Pinix Daemon",
+              translations: { "zh-CN": "Pinix Daemon" },
             },
             {
-              slug: "concepts/providers-and-edge",
-              label: "Providers & Edge Clips",
-              translations: { "zh-CN": "Provider 与 Edge Clip" },
+              slug: "concepts/hub",
+              label: "Hub",
+              translations: { "zh-CN": "Hub" },
             },
             {
-              slug: "concepts/agent-and-clips",
-              label: "Agent & Clips",
-              translations: { "zh-CN": "Agent 与 Clip" },
-            },
-            {
-              slug: "concepts/clips-vs-mcp",
-              label: "Clips vs MCP vs GPTs",
-              translations: { "zh-CN": "Clip vs MCP vs GPTs" },
-            },
-          ],
-        },
-        {
-          label: "Getting Started",
-          translations: { "zh-CN": "快速上手" },
-          items: [
-            {
-              slug: "getting-started/installation",
-              label: "Installation",
-              translations: { "zh-CN": "安装" },
-            },
-            {
-              slug: "getting-started/quick-start",
-              label: "Quick Start",
-              translations: { "zh-CN": "快速开始" },
-            },
-            {
-              slug: "getting-started/first-clip",
-              label: "Your First Clip",
-              translations: { "zh-CN": "第一个 Clip" },
-            },
-            {
-              slug: "getting-started/mcp-integration",
-              label: "MCP Integration",
-              translations: { "zh-CN": "MCP 集成" },
+              slug: "concepts/clip-vs-mcp",
+              label: "Clip vs MCP & CLI",
+              translations: { "zh-CN": "Clip vs MCP & CLI" },
             },
           ],
         },

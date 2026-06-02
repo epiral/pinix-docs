@@ -1,99 +1,72 @@
 ---
-title: "Clip —— Agent 的 App"
-description: "Clip 是 Pinix 的核心抽象：一个三合一的单元，将知识、能力和资产打包成可安装的能力。"
+title: Clip
+description: "Clip 是 Agent 的 App。安装一个 Clip，Agent 就多一个能力。"
 ---
 
-import { Aside, Card, CardGrid } from "@astrojs/starlight/components";
+import { Aside } from "@astrojs/starlight/components";
 
-**Clip** 是 Pinix 的核心抽象 —— 一个自包含的单元，将 *做什么*、*怎么做* 和 *如何组合* 打包成一个可安装的组件。
+**Clip 就是 Agent 的 App。**
 
-你的手机靠 App 运行。你的 Agent 靠 Clip 运行。
+你的手机能做什么，取决于你装了哪些 App。你的 Agent 能做什么，取决于你装了哪些 Clip。
 
-## 三层模型
+安装一个 Twitter Clip，Agent 就能搜推文。安装一个待办事项 Clip，Agent 就能管理你的任务。卸载它，这个能力就消失。你完全控制 Agent 能做什么、不能做什么。
 
-每个 Clip 是一个三合一：
+## Package 和 Instance
 
-### 知识层（Knowledge Layer）
+Clip 有两层含义，类似 Docker 中镜像和容器的关系：
 
-方法论 —— Clip *能做什么*、*什么时候用*。
+| | Clip Package | Clip Instance |
+|---|---|---|
+| 类比 | Docker 镜像 | Docker 容器 |
+| 是什么 | 代码 + manifest + Web UI 的打包 | daemon 拉取 package 后运行的实例 |
+| 在哪 | Registry / Marketplace | 你的 daemon 上 |
+| 怎么操作 | `pinix hub add` 安装 | `pinix invoke` 调用 |
 
-Clip 的 **manifest** 告诉 Agent：
-- **我能做什么** —— 命令和匹配模式
-- **什么时候该用我** —— 匹配模式和实体
-- **怎么调用我** —— 带类型和校验的输入 schema
+当你执行 `pinix hub add @pinix/todo`：
+1. daemon 从 Registry 拉取 **package**
+2. 启动一个 **instance**（Bun 进程）
+3. 把 instance 注册到 Hub
+4. Agent 和 CLI 就可以调用了
 
-Builder 的领域专长编码在知识层中。这降低了对 Agent 模型的要求 —— 它不需要弄清楚*如何*浏览 Twitter，只需要识别出用户想搜索 Twitter，然后调用正确的命令。
+## Clip 能做什么
 
-### 能力层（Capability Layer）
+Clip 封装了 Agent 需要的能力。它不是一个简单的函数——它是一个完整的应用，有自己的命令、逻辑和状态。
 
-执行逻辑 —— 浏览器自动化、设备 API、业务流程。
+```
+用户："帮我搜一下推特上 AI 的热门"
+  │
+Agent 读取 Clip manifest → twitter clip 有 search 命令
+  │
+Agent 调用 twitter.search → Hub 路由 → Clip 执行
+  │
+Clip 内部：打开浏览器 → 导航到 Twitter → 提取结果 → 返回结构化数据
+  │
+Agent 把结果展示给用户
+```
 
-复杂逻辑在 Clip 里运行，不在模型的推理中。Agent 不需要知道*怎么做*，只需要知道*找谁*。
+Agent 不需要知道怎么操作浏览器、怎么解析页面、怎么处理登录——这些复杂逻辑全在 Clip 里。Clip 让 Agent 变得更强大，同时不需要更强的模型。
 
-### 资产层（Asset Layer）
-
-可组合、可复用、可沉淀 —— Clip 用 Clip，网络不断生长。
-
-Twitter Clip 可以依赖 Browser Clip。Research Clip 可以编排 Search + Twitter + Document Clip。你安装的 Clip 越多，可能的组合就越多。
-
-<Aside>
-  **More Clips, More Intelligence。** Clip 不是线性叠加 —— 它们相乘。五个 Clip 可以根据用户意图产生几十种不同的工作流。
+<Aside type="tip">
+  **Clip power Agent。** 有了 Clip，Agent 就有了能力。安装更多 Clip，Agent 就能做更多事。这就是 "More Clips, More Intelligence" 的含义。
 </Aside>
 
-## 三类 Clip
+## Clip 不只是工具
 
-| 类型 | 管理者 | 语言 | 安装方式 | 示例 |
-|------|--------|------|----------|------|
-| **SDK Clip** | Runtime | TypeScript | `pinix hub add` | @pinix/todo, @pinix/twitter |
-| **Edge Clip** | 自身（Provider） | 任意 | Provider 协议 | bb-browser, clip-dock-macos |
-| **Builtin Clip** | pinixd（进程内） | Go | 内置于守护进程 | agent, scheduler |
+和简单的 API 调用不同，Clip 包含了**让 Agent 正确使用自己的知识**：
 
-### SDK Clip
+- **manifest** 告诉 Agent：我能做什么、什么时候该用我、怎么调用我
+- 这些知识是 Clip 开发者的领域专长编码而成——开发者懂 Twitter API 的细节，把这些知识打包在 Clip 里
+- Agent 只需要读懂 manifest，不需要自己推理这些细节
 
-最常见的类型。用 TypeScript 和 `@pinixai/core` 编写，从 Registry 安装，由 Runtime 管理。当你执行 `pinix hub add @pinix/todo`，Runtime 下载包、启动 Bun 进程、注册到 Hub。
+这意味着**中等能力的模型就够了**——因为复杂的判断已经编码在 Clip 中。
 
-### Edge Clip
+## Clip 可以组合
 
-直接绑定硬件或 OS API。Browser Clip 控制 Chrome。macOS dock Clip 暴露截屏、剪贴板、通知。Edge Clip 自己实现 [Provider 协议](/zh/edge-clips/provider-protocol/)，作为独立服务连接 Hub。
+Clip 可以调用其他 Clip。一个 Twitter Clip 可以依赖 Browser Clip。一个 Research Clip 可以编排 Search + Twitter + Document Clip。
 
-### Builtin Clip
+你安装的 Clip 越多，可能的组合就越多。5 个 Clip 不是产生 5 种能力，而是可能产生几十种不同的工作流——取决于用户的意图。
 
-在 `pinixd` 进程内运行。目前有两个：
-- **agent** —— Go Agent Runtime（LLM 调用、工具循环、上下文管理）
-- **scheduler** —— 基于 cron 的任务调度
+## 下一步
 
-## Clip 生命周期
-
-```
-安装 ──► 注册到 Hub ──► 可被调用
-                              │
-                    Agent/用户调用命令
-                              │
-                    Clip 执行，返回结果
-```
-
-## 示例：Clip 如何工作
-
-当用户说 *"搜一下推特上的 AI 新闻"*：
-
-```
-用户: "搜一下推特上的 AI 新闻"
-  │
-Agent 读取所有已安装 Clip 的 manifest
-  │
-Agent 匹配: twitter clip 有 search 命令
-  │
-Agent 构造: { command: "search", args: { query: "AI news" } }
-  │
-Hub 路由到 twitter clip
-  │
-twitter clip:
-  ├── 打开浏览器（通过 bb-browser 依赖）
-  ├── 导航到 Twitter 搜索
-  ├── 提取结果
-  └── 返回结构化数据
-  │
-Agent 格式化并展示结果给用户
-```
-
-Agent 从未碰过浏览器。从未解析 HTML。它只知道*找谁*和*问什么*。
+- [pinix daemon](/zh/concepts/daemon/)——Clip 在哪里运行
+- [Hub](/zh/concepts/hub/)——Clip 如何被发现和调用

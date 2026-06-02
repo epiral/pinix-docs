@@ -1,0 +1,91 @@
+---
+title: Clip vs MCP & CLI
+description: "Clip 和 MCP Tool、传统 CLI 工具有什么不同。"
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+你可能用过 MCP Tool 给 Claude 加工具，或者直接写 CLI 脚本做自动化。Clip 和它们解决类似的问题，但做了不同的取舍。
+
+## 对比总览
+
+| | Clip | MCP Tool | CLI 脚本 |
+|---|---|---|---|
+| **给谁用** | Agent + 人 | Agent | 人 |
+| **自描述** | 结构化 manifest（命令、参数类型、匹配模式） | 纯文本 description | man page / --help |
+| **可组合** | Clip 调用 Clip，通过 Hub 路由 | 不支持跨工具调用 | shell pipe |
+| **生命周期管理** | daemon 管理进程、crash 自动重启 | 每个 server 自己管理 | 无 |
+| **分发** | Registry + Marketplace + 一键安装 | 手动配置 JSON | 手动拷贝 |
+| **设备能力** | Edge Clip（浏览器、截图、剪贴板） | 需要自己实现 server | 需要自己写 |
+| **共享** | Marketplace 共享 + 按次计费 | 不支持 | 不支持 |
+| **状态模型** | 每次调用无状态 | server 管理状态 | 有 session |
+
+## 关键差异
+
+### 1. Agent 能直接用
+
+MCP Tool 有一个文本 description，Agent 得靠猜来决定什么时候用。
+
+Clip 有**结构化 manifest**——命令名、参数类型、匹配模式都是机器可读的。Agent 不需要猜，直接匹配。
+
+```json
+// MCP Tool
+{ "name": "search_twitter", "description": "Search Twitter for tweets" }
+
+// Clip manifest
+{
+  "commands": [{
+    "name": "search",
+    "description": "Search tweets",
+    "patterns": ["search twitter", "find tweets about"],
+    "input": {
+      "query": { "type": "string", "required": true },
+      "sort": { "type": "string", "enum": ["recent", "hot", "relevant"] }
+    }
+  }]
+}
+```
+
+### 2. Clip 之间可以组合
+
+MCP Tool 之间是隔离的。你的 Twitter Tool 不能调用你的 Browser Tool。如果需要多步操作，Agent 必须一步步编排。
+
+Clip 可以互相调用——Twitter Clip 可以直接调用 Browser Clip，不需要 Agent 参与中间步骤。
+
+```
+MCP: Agent 编排每一步
+  Agent → Tool A → Agent → Tool B → Agent → Tool C
+
+Clip: Clip 内部组合
+  Agent → Clip A → (内部调用 Clip B) → 结果
+```
+
+更少的往返，更省 token，Agent 不需要理解中间细节。
+
+### 3. 有完整的运行时
+
+CLI 脚本你得自己管进程。MCP server 你得自己配置启动。
+
+Clip 有 pinix daemon——它帮你拉取、启动、监控、重启。`pinix hub add @pinix/todo` 一条命令搞定，不需要手动配 JSON 或写 systemd service。
+
+### 4. 内置分发和共享
+
+MCP 没有标准的包管理。每个 MCP server 都要手动在 `claude_desktop_config.json` 里配置路径。
+
+Clip 有 Registry（发布代码包）和 Marketplace（共享运行中的实例）。安装是一条命令，共享可以按次计费。
+
+### 5. 设备能力是一等公民
+
+想让 Agent 控制浏览器？MCP 需要你自己写一个 MCP server。
+
+Pinix 有 Edge Clip——bb-browser 把 Chrome 变成 36 个平台、100+ 个命令。`pinix start` 自动拉起，不需要额外配置。
+
+## 什么时候用什么
+
+| 场景 | 推荐 |
+|------|------|
+| 给 Agent 加一个快速能力 | Clip |
+| 需要跨工具组合的复杂工作流 | Clip |
+| 设备集成（浏览器、截图、剪贴板） | Edge Clip |
+| 想让别人付费使用你的能力 | 共享 Clip |
+| 单次脚本、不需要 Agent | CLI 脚本就够了 |

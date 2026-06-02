@@ -1,12 +1,12 @@
 ---
 title: Pinix Documentation
-description: "Pinix — the capability platform for AI Agents. Install Clips, extend Agent abilities, build and share capabilities."
+description: "Pinix — the application OS for AI Agents. Install Clips to extend Agent capabilities."
 template: splash
 hero:
-  tagline: "The capability platform for AI Agents. More Clips, More Intelligence."
+  tagline: "The application OS for AI Agents. More Clips, More Intelligence."
   actions:
-    - text: Quick Start
-      link: /getting-started/installation/
+    - text: Get Started
+      link: /getting-started/
       icon: right-arrow
       variant: primary
     - text: Core Concepts
@@ -18,79 +18,79 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+import { CardGrid, LinkCard } from "@astrojs/starlight/components";
 
-## Get started
+## Quick Start
 
 <CardGrid>
   <LinkCard
-    title="Install Pinix"
-    description="One command installs everything. macOS and Linux."
+    title="Use in the Cloud"
+    description="Sign up at pinixai.com and start using Agents and Clips with zero installation."
+    href="/getting-started/"
+  />
+  <LinkCard
+    title="Local Installation"
+    description="Install the pinix daemon and run Clips locally."
     href="/getting-started/installation/"
   />
   <LinkCard
-    title="Quick Start"
-    description="Start the daemon, log in, and invoke your first Clip in 60 seconds."
-    href="/getting-started/quick-start/"
-  />
-  <LinkCard
-    title="Your First Clip"
-    description="Install a Clip from the Registry and use it."
+    title="Build Your First Clip"
+    description="Create your own Clip with TypeScript."
     href="/getting-started/first-clip/"
   />
   <LinkCard
-    title="MCP Integration"
-    description="Use Clips in Claude Desktop, Cursor, and other MCP clients."
-    href="/getting-started/mcp-integration/"
+    title="Publish and Share"
+    description="Publish your Clip to the Registry or share it with other users."
+    href="/getting-started/publishing/"
   />
 </CardGrid>
 
-## Understand the architecture
+## Understand Pinix
 
 <CardGrid>
   <LinkCard
     title="What is a Clip?"
-    description="Knowledge + Capability + Asset — the three-layer model."
+    description="An App for Agents. Install one, and your Agent gains a new capability."
     href="/concepts/clips/"
   />
   <LinkCard
-    title="Hub & Routing"
-    description="How the Hub connects Agents to Clips."
-    href="/concepts/hub-and-routing/"
+    title="Pinix Daemon"
+    description="The runtime environment for Clips, with a built-in Local Hub."
+    href="/concepts/daemon/"
   />
   <LinkCard
-    title="Agent thin, Clip thick"
-    description="Why Pinix Agents work with mid-tier models."
-    href="/concepts/agent-and-clips/"
+    title="Hub"
+    description="Where Clips are discovered and invoked."
+    href="/concepts/hub/"
   />
   <LinkCard
-    title="Clips vs MCP vs GPTs"
-    description="Feature comparison with other tool frameworks."
-    href="/concepts/clips-vs-mcp/"
+    title="Clip vs MCP & CLI"
+    description="How Clips differ from MCP Tools and CLI scripts."
+    href="/concepts/clip-vs-mcp/"
   />
 </CardGrid>
 
-## Build capabilities
+## Developers
 
 <CardGrid>
   <LinkCard
-    title="Build a Clip"
-    description="Create a Clip with @pinixai/core and test it locally."
+    title="Clip Development"
+    description="A complete guide to building Clips with @pinixai/core."
     href="/clip-development/getting-started/"
   />
   <LinkCard
     title="Design Principles"
-    description="Agent-native design: token economy, stateless ops, action-ready responses."
+    description="How to design Clips that make Agents more effective."
     href="/clip-development/design-principles/"
   />
   <LinkCard
     title="BB-Browser"
-    description="36 platforms, 103 commands — your browser as an API."
+    description="A browser automation Edge Clip with 36 platforms and 103 commands."
     href="/edge-clips/bb-browser/"
   />
   <LinkCard
-    title="Publish"
-    description="Share your Clip with the world via the Registry."
+    title="Publishing"
+    description="Publish Clips to the Registry."
     href="/clip-development/publishing/"
   />
 </CardGrid>

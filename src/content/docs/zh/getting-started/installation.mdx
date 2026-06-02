@@ -1,64 +1,123 @@
 ---
-title: 安装
-description: "在 macOS 或 Linux 上用一条命令安装 Pinix。"
+title: 本地安装
+description: "安装 pinix daemon，在本地运行 Clip。"
 ---
 
-import { Aside, Tabs, TabItem, Steps } from "@astrojs/starlight/components";
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+想要在本地运行 Clip，你需要安装 pinix daemon。
 
 ## 系统要求
 
 | | 支持 |
 |---|---|
-| **OS** | macOS, Linux |
+| **操作系统** | macOS、Linux |
 | **架构** | arm64（Apple Silicon、ARM 服务器）、amd64（Intel/AMD） |
-| **自动安装** | Node.js, Bun, bb-browser, Chrome |
 
 <Aside>
-  目前不支持 Windows。在 Windows 上请使用 [Docker](#docker) 或 WSL2。
+  Windows 暂不支持。可以使用 [Docker](#docker) 或 WSL2。
 </Aside>
 
-## 一行命令安装
+## 安装
+
+<Steps>
+
+1. **一键安装**
+
+   ```bash
+   curl -fsSL dl.pinixai.com/install.sh | sh
+   ```
+
+   这会自动安装：
+
+   | 组件 | 用途 |
+   |------|------|
+   | `pinix` | CLI + daemon（单一二进制） |
+   | Node.js | 运行时依赖（如果没有会自动通过 fnm 安装） |
+   | Bun | Clip 运行时——用于运行 TypeScript Clip |
+   | bb-browser | 浏览器自动化 Edge Clip |
+
+   Chrome 会在首次启动 daemon 时自动下载。
+
+2. **启动 daemon**
+
+   ```bash
+   pinix start
+   ```
+
+   daemon 启动在 :9000 端口，同时自动拉起 Chrome 和 bb-browser。
+
+3. **登录**
+
+   ```bash
+   pinix login
+   ```
+
+   这会打开浏览器进行授权。登录后，daemon 自动连接 Cloud Hub，你的本地 Clip 从云端也能访问。
+
+   <Aside type="tip">
+     也可以用 token 登录：`pinix login --token pnx_...`（从 [pinixai.com/settings](https://pinixai.com/settings) 获取 token）。
+   </Aside>
+
+4. **打开 Console**
+
+   ```bash
+   open http://localhost:9000
+   ```
+
+   本地 Console 和云端 Console 功能一致，但所有 Clip 运行在你的机器上。
+
+</Steps>
+
+## 试一下
+
+启动后，bb-browser 的平台 Clip 已经自动注册：
 
 ```bash
-curl -fsSL dl.pinixai.com/install.sh | sh
+# 查看可用的 Clip
+pinix hub list
+
+# 搜索 HackerNews
+pinix invoke hackernews top
+
+# 搜索 Google
+pinix invoke google search "pinix ai agent"
+
+# 安装一个 Clip
+pinix hub add @pinix/todo
+
+# 使用它
+pinix invoke todo list
 ```
 
-这会安装你需要的一切：
+## 常用命令
 
-| 组件 | 用途 |
-|-----------|---------|
-| `pinix` | CLI + daemon（单个二进制文件） |
-| Node.js | Runtime 依赖（如果缺失，会通过 fnm 安装） |
-| Bun | Clip runtime —— 运行 TypeScript Clips |
-| bb-browser | 浏览器自动化 Edge Clip |
-
-Chrome 会在第一次运行 `pinix start` 时自动下载。
-
-### 仅 CLI 模式
-
-如果你只需要 CLI（不需要 daemon，不需要浏览器），使用：
-
-```bash
-curl -fsSL dl.pinixai.com/install.sh | sh -s -- --cli
-```
-
-这只会安装 `pinix` 二进制文件，用于远程调用另一个 Hub。
+| 命令 | 说明 |
+|------|------|
+| `pinix start` | 启动 daemon |
+| `pinix stop` | 停止 daemon |
+| `pinix hub list` | 查看已安装的 Clip |
+| `pinix hub add @scope/name` | 安装 Clip |
+| `pinix hub remove <alias>` | 卸载 Clip |
+| `pinix invoke <alias> <command>` | 调用 Clip |
+| `pinix upgrade` | 升级 Pinix |
+| `pinix whoami` | 查看登录状态 |
 
 ## Docker
 
-用于零配置部署：
+如果不想在宿主机安装，可以用 Docker：
 
 ```bash
 docker run -d --shm-size=2g lueco/pinix <your-hub-token>
 ```
 
-Docker 镜像包含 pinix、Bun、Node.js、bb-browser、Chrome 和 Xvfb。它会启动 daemon，并使用提供的 token 自动登录。
+镜像包含 pinix、Bun、Node.js、bb-browser、Chrome 和 Xvfb。启动后自动登录并运行 daemon。
 
-注册后，从 [pinixai.com/settings](https://pinixai.com/settings) 获取你的 Hub token。
+Hub token 从 [pinixai.com/settings](https://pinixai.com/settings) 获取。
 
 ## 从源码构建
 
-需要 Go 1.25+。
+需要 Go 1.25+：
 
 ```bash
 git clone https://github.com/epiral/pinix.git
@@ -66,26 +125,22 @@ cd pinix
 make build
 ```
 
-这会在当前目录生成 `pinix` 二进制文件。你还需要单独安装 Bun 和 bb-browser：
+还需要单独安装 Bun 和 bb-browser：
 
 ```bash
-# Install Bun
 curl -fsSL https://bun.sh/install | bash
-
-# Install bb-browser
 npm install -g bb-browser
 ```
 
 ## 升级
 
-Pinix 可以自我升级：
-
 ```bash
 pinix upgrade
 ```
 
-这会下载最新二进制文件并更新 bb-browser。
+会自动下载最新二进制并更新 bb-browser。
 
 ## 下一步
 
-安装完成后，继续阅读 [快速开始](/zh/getting-started/quick-start/)，启动 daemon 并开始使用 Clips。
+- [开发第一个 Clip](/zh/getting-started/first-clip/)
+- [了解核心概念](/zh/concepts/)

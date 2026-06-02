@@ -1,95 +1,151 @@
 ---
-title: Your First Clip
-description: "Install a Clip from the Registry, invoke it from the CLI, and see it in the Console."
+title: Build Your First Clip
+description: "Create a Clip with @pinixai/core, test it locally, and let an Agent use it."
 ---
 
 import { Aside, Steps } from "@astrojs/starlight/components";
 
-With the daemon running and logged in, let's install and use your first Clip.
+Clips are written in TypeScript. Use the `@pinixai/core` SDK to define commands, and the pinix daemon runs them.
+
+## Prerequisites
+
+- [The pinix daemon is installed and running](/getting-started/installation/)
+- [Bun](https://bun.sh) (installed automatically when you install Pinix)
+
+## Create a Clip
 
 <Steps>
 
-1. **Install a Clip**
+1. **Initialize the project**
 
    ```bash
-   pinix hub add @pinix/todo
+   mkdir my-clip && cd my-clip
+   bun init -y
+   bun add @pinixai/core
    ```
 
-   This downloads the `@pinix/todo` Clip from the Registry and starts it locally. The Runtime manages its lifecycle — if it crashes, it restarts automatically.
+2. **Create `clip.json`**
 
-2. **List your Clips**
+   ```json
+   {
+     "name": "@yourscope/my-clip",
+     "version": "0.1.0",
+     "description": "我的第一个 Clip",
+     "main": "src/index.ts"
+   }
+   ```
+
+3. **Write the Clip**
+
+   Create `src/index.ts`:
+
+   ```typescript
+   import { Clip } from "@pinixai/core";
+
+   const clip = new Clip({
+     name: "@yourscope/my-clip",
+     description: "我的第一个 Clip",
+   });
+
+   clip.command("hello", {
+     description: "Say hello",
+     input: {
+       name: { type: "string", description: "Name to greet", required: true },
+     },
+     handler: async ({ input }) => {
+       return { message: `Hello, ${input.name}!` };
+     },
+   });
+
+   clip.run();
+   ```
+
+4. **Install and test locally**
 
    ```bash
-   pinix hub list
+   pinix hub add local/my-clip --path .
+   pinix invoke my-clip hello --name "World"
+   # → { "message": "Hello, World!" }
    ```
 
-   You should see `todo` in the list alongside the bb-browser platform adapters (hackernews, google, twitter, etc.).
+5. **Iterate**
 
-3. **Use it**
-
-   ```bash
-   # Add a task
-   pinix invoke todo add "Read the Pinix docs"
-
-   # List tasks
-   pinix invoke todo list
-
-   # Complete a task
-   pinix invoke todo complete <task-id>
-   ```
-
-4. **See it in the Console**
-
-   Open [localhost:9000](http://localhost:9000) and navigate to **Clips**. You'll see your installed Clips with their status, commands, and Web UI (if available).
+   After you modify `src/index.ts`, the daemon automatically restarts the Clip process. Invoke it again to test the change.
 
 </Steps>
 
-## Explore available Clips
+## Project Structure
 
-### From the CLI
-
-```bash
-# Search the Registry
-pinix registry search todo
-
-# See package details
-pinix registry info @pinix/todo
+```
+my-clip/
+├── clip.json          # 包描述
+├── src/
+│   └── index.ts       # 入口文件
+├── package.json       # 依赖
+└── web/               # 可选：Web UI
+    └── index.html
 ```
 
-### From the Marketplace
+## Add More Commands
 
-Open the Console and go to **Marketplace** to browse, search, and install Clips from other users.
+```typescript
+clip.command("list", {
+  description: "List all items",
+  handler: async () => {
+    const items = await db.getAll();
+    return { items, total: items.length };
+  },
+});
 
-You can also visit the [Marketplace on pinixai.com](https://pinixai.com/marketplace) (requires login).
-
-## Discover command details
-
-Every Clip is self-documenting:
-
-```bash
-# See all commands of a Clip
-pinix invoke todo --help
-
-# See details of a specific command
-pinix invoke todo add --help
+clip.command("add", {
+  description: "Add a new item",
+  input: {
+    title: { type: "string", required: true },
+    priority: { type: "string", enum: ["low", "medium", "high"] },
+  },
+  handler: async ({ input }) => {
+    const item = await db.create(input);
+    return item;
+  },
+});
 ```
 
-The `--help` output includes the command description, input parameters with types, and usage examples.
+## Invoke Other Clips
+
+Your Clip can invoke other installed Clips through the Hub:
+
+```typescript
+import { invoke } from "@pinixai/core";
+
+clip.command("research", {
+  description: "Research a topic",
+  input: {
+    topic: { type: "string", required: true },
+  },
+  handler: async ({ input }) => {
+    const results = await invoke("google", "search", {
+      query: input.topic,
+    });
+    return { results };
+  },
+});
+```
+
+## View Command Help
+
+Every Clip is self-describing:
+
+```bash
+pinix invoke my-clip --help          # 查看所有命令
+pinix invoke my-clip hello --help    # 查看单个命令的参数
+```
 
 <Aside type="tip">
-  When the Agent selects which Clip to use, it reads this same information from the Clip's manifest. Well-documented commands make the Agent more effective.
+  When an Agent selects a Clip, it reads this information. The clearer the command descriptions are, the more accurately the Agent can use them.
 </Aside>
 
-## Uninstall a Clip
+## Next Steps
 
-```bash
-pinix hub remove todo
-```
-
-The Clip process is stopped and the package is removed from the local installation.
-
-## Next steps
-
-- [Set up MCP integration](/getting-started/mcp-integration/) to use your Clips from Claude Desktop or Cursor
-- [Learn about Clip concepts](/concepts/clips/) to understand how Clips work
-- [Build your own Clip](/clip-development/getting-started/) if you want to create capabilities
+- [Publish and Share Clips](/getting-started/publishing/)
+- [Clip Design Principles](/clip-development/design-principles/) — how to design Clips that make Agents more effective
+- [Command Design](/clip-development/command-design/) — best practices for command naming, inputs, and outputs

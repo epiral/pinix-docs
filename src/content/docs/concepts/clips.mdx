@@ -1,104 +1,72 @@
 ---
-title: "Clips — Apps for your Agent"
-description: "Clips are the core abstraction of Pinix: a three-in-one unit of Knowledge, Capability, and Asset that gives AI Agents real-world abilities."
+title: Clip
+description: "A Clip is an App for Agents. Install a Clip, and your Agent gains a new capability."
 ---
 
-import { Aside, Card, CardGrid, Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside } from "@astrojs/starlight/components";
 
-A **Clip** is Pinix's core abstraction — a self-contained unit that bundles *what to do*, *how to do it*, and *how to compose it* into a single installable package.
+**A Clip is an App for Agents.**
 
-Your phone runs on apps. Your Agent runs on Clips.
+What your phone can do depends on which Apps you install. What your Agent can do depends on which Clips you install.
 
-## The three-layer model
+Install a Twitter Clip, and the Agent can search tweets. Install a Todo Clip, and the Agent can manage your tasks. Uninstall it, and the capability disappears. You fully control what the Agent can and cannot do.
 
-Every Clip is a three-in-one:
+## Package and Instance
 
-### Knowledge Layer
+Clip has two meanings, similar to the relationship between images and containers in Docker:
 
-The methodology — *what* the Clip can do and *when* to use it.
+| | Clip Package | Clip Instance |
+|---|---|---|
+| Analogy | Docker image | Docker container |
+| What it is | A package of code + manifest + Web UI | An instance the daemon runs after pulling the package |
+| Where it is | Registry / Marketplace | On your daemon |
+| How to operate it | Install with `pinix hub add` | Invoke with `pinix invoke` |
 
-A Clip's **manifest** tells the Agent:
-- **What I can do** — commands and patterns
-- **When you should use me** — matching patterns and entities
-- **How to call me** — input schema with types and validation
+When you run `pinix hub add @pinix/todo`:
+1. The daemon pulls the **package** from the Registry
+2. It starts an **instance** (a Bun process)
+3. It registers the instance with the Hub
+4. The Agent and CLI can then invoke it
 
-The Builder's domain expertise is encoded in the Knowledge Layer. This lowers the bar for the Agent model — it doesn't need to figure out *how* to browse Twitter, it just needs to recognize that the user wants to search Twitter and call the right command.
+## What Clips Can Do
 
-### Capability Layer
+A Clip packages the capabilities an Agent needs. It is not just a simple function. It is a complete application with its own commands, logic, and state.
 
-The execution logic — browser automation, device APIs, business workflows.
+```
+用户："帮我搜一下推特上 AI 的热门"
+  │
+Agent 读取 Clip manifest → twitter clip 有 search 命令
+  │
+Agent 调用 twitter.search → Hub 路由 → Clip 执行
+  │
+Clip 内部：打开浏览器 → 导航到 Twitter → 提取结果 → 返回结构化数据
+  │
+Agent 把结果展示给用户
+```
 
-Complex logic runs inside the Clip, not in the model's reasoning. The Agent doesn't need to know *how* to do things, only *who* to call.
+The Agent does not need to know how to operate the browser, parse the page, or handle login. All of that complex logic lives inside the Clip. Clips make Agents more capable without requiring stronger models.
 
-### Asset Layer
-
-Composable, reusable, accumulable — Clips use Clips, and the network grows.
-
-A Twitter Clip can depend on a Browser Clip. A Research Clip can orchestrate Search + Twitter + Document Clips. The more Clips you install, the more combinations become possible.
-
-<Aside>
-  **More Clips, More Intelligence.** Clips don't add linearly — they multiply. Five Clips can produce dozens of distinct workflows depending on the user's intent.
+<Aside type="tip">
+  **Clips power Agents.** With Clips, Agents gain capabilities. Install more Clips, and Agents can do more. This is what "More Clips, More Intelligence" means.
 </Aside>
 
-## Three types of Clips
+## Clips Are More Than Tools
 
-| Type | Managed by | Language | Install method | Examples |
-|------|-----------|----------|---------------|----------|
-| **SDK Clip** | Runtime | TypeScript | `pinix hub add` | @pinix/todo, @pinix/twitter |
-| **Edge Clip** | Self (Provider) | Any | Provider protocol | bb-browser, clip-dock-macos |
-| **Builtin Clip** | pinixd (in-process) | Go | Built into daemon | agent, scheduler |
+Unlike a simple API call, a Clip contains the **knowledge that lets an Agent use it correctly**:
 
-### SDK Clips
+- The **manifest** tells the Agent what the Clip can do, when to use it, and how to invoke it
+- This knowledge is encoded from the Clip developer's domain expertise: the developer understands the details of the Twitter API and packages that knowledge into the Clip
+- The Agent only needs to understand the manifest; it does not need to reason through those details itself
 
-The most common type. Written in TypeScript using `@pinixai/core`, installed from the Registry, managed by the Runtime. When you `pinix hub add @pinix/todo`, the Runtime downloads the package, starts a Bun process, and registers it with the Hub.
+This means a **moderately capable model is enough**, because the complex judgment has already been encoded in the Clip.
 
-### Edge Clips
+## Clips Can Compose
 
-Bind directly to hardware or OS APIs. A browser Clip controls Chrome. A macOS dock Clip exposes screenshots, clipboard, notifications. Edge Clips implement the [Provider protocol](/edge-clips/provider-protocol/) themselves and connect to the Hub as independent services.
+Clips can invoke other Clips. A Twitter Clip can depend on a Browser Clip. A Research Clip can orchestrate Search + Twitter + Document Clips.
 
-### Builtin Clips
+The more Clips you install, the more combinations become possible. Five Clips do not create just five capabilities. They may create dozens of different workflows, depending on the user's intent.
 
-Run inside the `pinixd` process itself. Currently two exist:
-- **agent** — the Go Agent Runtime (LLM calls, tool loop, context management)
-- **scheduler** — cron-based task scheduling
+## Next Steps
 
-## Clip lifecycle
-
-```
-Install ──► Register with Hub ──► Available for invocation
-                                        │
-                              Agent/User calls a command
-                                        │
-                              Clip executes, returns result
-```
-
-1. **Install**: `pinix hub add @pinix/todo` downloads from Registry
-2. **Register**: Runtime starts the Clip process and registers its commands with Hub
-3. **Invoke**: Agent or user calls `pinix invoke todo list`
-4. **Execute**: Hub routes to the Clip, Clip runs logic, returns structured result
-
-## Example: How a Clip works
-
-When a user says *"search Twitter for AI news"*, here's what happens:
-
-```
-User: "search Twitter for AI news"
-  │
-Agent reads manifests of all installed Clips
-  │
-Agent matches: twitter clip has `search` command
-  │
-Agent constructs: { command: "search", args: { query: "AI news" } }
-  │
-Hub routes to twitter clip
-  │
-twitter clip:
-  ├── Opens browser (via bb-browser dependency)
-  ├── Navigates to Twitter search
-  ├── Extracts results
-  └── Returns structured data
-  │
-Agent formats and presents results to user
-```
-
-The Agent never touched a browser. It never parsed HTML. It just knew *who to call* and *what to ask for*.
+- [pinix daemon](/concepts/daemon/) — where Clips run
+- [Hub](/concepts/hub/) — how Clips are discovered and invoked

@@ -1,0 +1,86 @@
+---
+title: Publishing and Sharing
+description: "Publish your Clip to the Registry, or share it for other users to use."
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+There are two ways to share a Clip with others: **publish** and **share**.
+
+## Publish vs Share
+
+| | Publish | Share |
+|---|---|---|
+| What it means | Upload the code to the Registry | Expose a running Clip instance to other users |
+| How others use it | `pinix hub add @scope/name`, then run it on their own machine | Invoke it remotely through the Cloud Hub, with the Clip running on your machine |
+| Code ownership | The code is in the Registry; others download and run it themselves | You keep the code; others can only invoke it |
+| Billing | Not directly supported | You can set per-call pricing (Credit) |
+
+## Publish to the Registry
+
+<Steps>
+
+1. **Confirm you are logged in**
+
+   ```bash
+   pinix registry whoami
+   # → @yourscope
+   ```
+
+2. **Check clip.json**
+
+   ```json
+   {
+     "name": "@yourscope/my-clip",
+     "version": "0.1.0",
+     "description": "我的 Clip 做什么",
+     "main": "src/index.ts"
+   }
+   ```
+
+3. **Publish**
+
+   ```bash
+   pinix registry publish .
+   ```
+
+</Steps>
+
+After publishing, anyone can install your Clip with `pinix hub add @yourscope/my-clip`.
+
+<Aside type="caution">
+  Version numbers cannot be reused. Update the `version` field in `clip.json` before every publish.
+</Aside>
+
+## Share a Clip
+
+Sharing is done in the Console:
+
+<Steps>
+
+1. Open the **Sharing** page in the Console
+2. Select the local Clip that is currently running
+3. Set the share name, tags, description, and access mode
+4. Publish
+
+</Steps>
+
+After sharing, your Clip appears in the Marketplace if you choose public mode. Other users can Add and use it, and invocation requests are routed through the Cloud Hub to your daemon.
+
+### Access Modes
+
+| Mode | Description |
+|------|-------------|
+| **public** | Visible in the Marketplace; anyone can add it |
+| **unlisted** | Not shown in the Marketplace, but accessible to anyone with the link |
+| **private** | Requires authorization to access |
+| **token** | Requires a share token to subscribe |
+
+### Per-Call Billing
+
+Shared Clips can set a price for each invocation, priced in Credit. Each time a user invokes the Clip, you receive the corresponding Credit.
+
+## Next Steps
+
+- [Learn the Core Concepts](/concepts/)
+- [Detailed Clip Development Guide](/clip-development/getting-started/)
