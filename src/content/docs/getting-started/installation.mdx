@@ -1,18 +1,18 @@
 ---
 title: Local Installation
-description: "Install the pinix daemon locally to run Clips, or install only the CLI for remote access."
+description: "Install the pinix daemon locally to run Clips, or install only the CLI for remote invocation."
 ---
 
 import { Aside, Steps, Tabs, TabItem } from "@astrojs/starlight/components";
 
-Pinix offers two installation modes, depending on your use case:
+Pinix has two installation modes, depending on your use case:
 
 | Installation mode | Best for | What it installs |
-|-------------------|----------|------------------|
+|---------|-------|---------|
 | **Full installation** | People who want to run Clips on this machine | daemon + CLI + browser engine + runtime |
-| **CLI-only** | People who want to invoke other people's Clips remotely | Only the `pinix` CLI |
+| **CLI-only** | People who want to invoke other people's Clips remotely | Only the `pinix` command-line tool |
 
-A typical setup is to fully install Pinix on one server to run the daemon and Clips, while everyone else on the team installs CLI-only on their own machines for remote access. Or, if you are already using the [pinixai.com Cloud Agent](/getting-started/), you can install only the CLI so Clips are available from your terminal too.
+Typical setup: one server uses the full installation to run the daemon and Clips, while the rest of the team installs CLI-only on their own machines for remote invocation. Or, if you are already using the [pinixai.com Cloud Agent](/getting-started/), you can install only the CLI to invoke Clips from your terminal too.
 
 ## System Requirements
 
@@ -46,7 +46,7 @@ irm dl.pinixai.com/install.ps1 | iex
 docker run -d --shm-size=2g lueco/pinix <your-hub-token>
 ```
 
-Get the Hub token from [pinixai.com/settings](https://pinixai.com/settings). The image includes all components.
+Get the Hub token from [pinixai.com/settings](https://pinixai.com/settings). The image includes every component.
 
   </TabItem>
 </Tabs>
@@ -54,9 +54,9 @@ Get the Hub token from [pinixai.com/settings](https://pinixai.com/settings). The
 Components installed automatically:
 
 | Component | Purpose |
-|-----------|---------|
+|------|------|
 | `pinix` | CLI + daemon (single binary) |
-| Node.js | Runtime dependency, installed automatically if missing |
+| Node.js | Runtime dependency (installed automatically if missing) |
 | Bun | Clip runtime for running TypeScript Clips |
 | bb-browser | Browser automation Edge Clip |
 
@@ -72,19 +72,19 @@ Chrome is downloaded automatically the first time the daemon starts.
    pinix start
    ```
 
-   The daemon starts on port :9000 and automatically starts Chrome and bb-browser.
+   The daemon starts on port :9000 and automatically launches Chrome and bb-browser.
 
 2. **Log in**
 
    ```bash
+   # 浏览器授权（会自动打开浏览器）
    pinix login
+
+   # 或者用 token 登录（从 pinixai.com/settings 获取 token）
+   pinix login --token pnx_...
    ```
 
-   This opens your browser for authorization. After login, the daemon automatically connects to the Cloud Hub. Your local Clips become accessible from the cloud, and you can use Clips shared by others.
-
-   <Aside type="tip">
-     You can also log in with a token: `pinix login --token pnx_...` (get it from [pinixai.com/settings](https://pinixai.com/settings)).
-   </Aside>
+   After login, the daemon automatically connects to the Cloud Hub. Your local Clips can be accessed from the cloud, and you can also use Clips shared by others.
 
 3. **Start using Pinix**
 
@@ -108,7 +108,7 @@ Chrome is downloaded automatically the first time the daemon starts.
 
 ## CLI-only Installation
 
-Install only the `pinix` command-line tool, without starting a daemon or installing runtimes. Use it to invoke other people's Clips through a remote Hub.
+Install only the `pinix` command-line tool, without starting the daemon or installing runtimes. Use it to invoke Clips through the Cloud Hub or a remote daemon.
 
 <Tabs>
   <TabItem label="macOS / Linux">
@@ -127,30 +127,63 @@ irm dl.pinixai.com/install.ps1 | iex  # 选择 CLI-only 模式
   </TabItem>
 </Tabs>
 
-After installation, specify a remote Hub address with `--server` to invoke Clips:
+### Log In
+
+After installation, you need to log in. There are two ways:
+
+<Tabs>
+  <TabItem label="Browser Authorization">
 
 ```bash
-# 调用远程 daemon 上的 Clip
+pinix login
+```
+
+This prints a link and automatically opens your browser. Confirm authorization on the web page to finish.
+
+  </TabItem>
+  <TabItem label="Token Login">
+
+```bash
+pinix login --token pnx_...
+```
+
+Get the token from the **Hub Token** section at [pinixai.com/settings](https://pinixai.com/settings). This is suitable for browserless environments such as servers and CI/CD.
+
+  </TabItem>
+</Tabs>
+
+After login, the CLI automatically connects to the Cloud Hub. You do not need to manually specify `--server`; use it directly:
+
+```bash
+# 查看所有可用的 Clip（你自己的 + 别人共享的）
+pinix hub list
+
+# 调用 Clip
+pinix invoke todo list
+pinix invoke hackernews top
+```
+
+### Directly Connect to a LAN Daemon
+
+If you do not want to go through the Cloud Hub, you can also connect directly to another machine's daemon on the local network:
+
+```bash
 pinix --server http://192.168.1.100:9000 hub list
 pinix --server http://192.168.1.100:9000 invoke todo list
-
-# 或者登录后通过 Cloud Hub 调用
-pinix login
-pinix invoke todo list
 ```
 
 <Aside type="tip">
-  CLI-only is a good fit for these cases:
-  - A team shares one daemon server, and everyone else only needs CLI access
-  - Invoking Clips in CI/CD
-  - Using Clips remotely from lightweight devices
-  - Invoking Clips running on macOS/Linux remotely from Windows
+  CLI-only is a good fit for these scenarios:
+  - A team shares one daemon server, and everyone else only needs CLI invocation
+  - Invoking Clips in CI/CD (log in with a token)
+  - Using Clips remotely from lightweight devices or Windows
+  - You only want to use Clips from the terminal and do not need to run a local daemon
 </Aside>
 
 ## Common Commands
 
 | Command | Description | Requires daemon |
-|---------|-------------|:---------------:|
+|------|------|:-----------:|
 | `pinix start` | Start the daemon | — |
 | `pinix stop` | Stop the daemon | — |
 | `pinix login` | Log in | No |

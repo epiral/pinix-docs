@@ -77,14 +77,14 @@ Chrome 会在首次启动 daemon 时自动下载。
 2. **登录**
 
    ```bash
+   # 浏览器授权（会自动打开浏览器）
    pinix login
+
+   # 或者用 token 登录（从 pinixai.com/settings 获取 token）
+   pinix login --token pnx_...
    ```
 
-   打开浏览器进行授权。登录后，daemon 自动连接 Cloud Hub——你的本地 Clip 从云端也能访问，你也能用到别人共享的 Clip。
-
-   <Aside type="tip">
-     也可以用 token 登录：`pinix login --token pnx_...`（从 [pinixai.com/settings](https://pinixai.com/settings) 获取）。
-   </Aside>
+   登录后，daemon 自动连接 Cloud Hub——你的本地 Clip 从云端也能访问，你也能用到别人共享的 Clip。
 
 3. **开始使用**
 
@@ -108,7 +108,7 @@ Chrome 会在首次启动 daemon 时自动下载。
 
 ## CLI-only 安装
 
-只安装 `pinix` 命令行工具，不启动 daemon，不装运行时。通过远程 Hub 调用别人的 Clip。
+只安装 `pinix` 命令行工具，不启动 daemon，不装运行时。通过 Cloud Hub 或远程 daemon 调用 Clip。
 
 <Tabs>
   <TabItem label="macOS / Linux">
@@ -127,24 +127,57 @@ irm dl.pinixai.com/install.ps1 | iex  # 选择 CLI-only 模式
   </TabItem>
 </Tabs>
 
-安装后，通过 `--server` 指定远程 Hub 地址来调用 Clip：
+### 登录
+
+安装后需要登录，有两种方式：
+
+<Tabs>
+  <TabItem label="浏览器授权">
 
 ```bash
-# 调用远程 daemon 上的 Clip
+pinix login
+```
+
+会打印一个链接并自动打开浏览器，在网页上确认授权即可。
+
+  </TabItem>
+  <TabItem label="Token 登录">
+
+```bash
+pinix login --token pnx_...
+```
+
+Token 从 [pinixai.com/settings](https://pinixai.com/settings) 的 **Hub Token** 部分获取。适合无浏览器环境（服务器、CI/CD）。
+
+  </TabItem>
+</Tabs>
+
+登录后，CLI 自动连接 Cloud Hub。不需要手动指定 `--server`，直接使用：
+
+```bash
+# 查看所有可用的 Clip（你自己的 + 别人共享的）
+pinix hub list
+
+# 调用 Clip
+pinix invoke todo list
+pinix invoke hackernews top
+```
+
+### 直连局域网 daemon
+
+如果不走 Cloud Hub，也可以直接连接局域网内另一台机器的 daemon：
+
+```bash
 pinix --server http://192.168.1.100:9000 hub list
 pinix --server http://192.168.1.100:9000 invoke todo list
-
-# 或者登录后通过 Cloud Hub 调用
-pinix login
-pinix invoke todo list
 ```
 
 <Aside type="tip">
   CLI-only 适合这些场景：
   - 团队共享一台 daemon 服务器，其他人只需要 CLI 调用
-  - 在 CI/CD 中调用 Clip
-  - 在轻量设备上远程使用 Clip
-  - 在 Windows 上远程调用 macOS/Linux 上跑的 Clip
+  - 在 CI/CD 中调用 Clip（用 token 登录）
+  - 在轻量设备或 Windows 上远程使用 Clip
+  - 只想在终端里用 Clip，不需要本地跑 daemon
 </Aside>
 
 ## 常用命令
