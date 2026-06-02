@@ -104,6 +104,23 @@ my-clip/
 └── .git/             ✗ Excluded
 ```
 
+## Dist-tag Management
+
+By default, the published version is tagged as `latest`. You can manage dist-tags to control different release channels:
+
+```bash
+# 查看包的所有 dist-tag
+pinix registry dist-tag list @yourscope/my-clip
+
+# 给指定版本设置 tag
+pinix registry dist-tag add @yourscope/my-clip@0.2.0 beta
+
+# 发布时指定 tag（不影响 latest）
+pinix registry publish . --tag beta
+```
+
+Users can specify a tag when installing: `pinix hub add @yourscope/my-clip@beta`
+
 ## Verifying your published Clip
 
 After publishing, verify it's accessible:
@@ -112,9 +129,9 @@ After publishing, verify it's accessible:
 # Search for it
 pinix registry search my-clip
 
-# Check package details
-pinix registry info @yourscope/my-clip
-
 # Install it (on another machine or after removing local)
 pinix hub add @yourscope/my-clip
+
+# 查看安装后的 Clip 信息
+pinix hub info my-clip
 ```

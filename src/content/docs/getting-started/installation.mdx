@@ -191,8 +191,11 @@ pinix --server http://192.168.1.100:9000 invoke todo list
 | `pinix hub list` | View the Clip list | Yes |
 | `pinix hub add @scope/name` | Install a Clip | Yes |
 | `pinix hub remove <alias>` | Uninstall a Clip | Yes |
+| `pinix hub update [alias]` | Update Clips to the latest version | Yes |
+| `pinix hub info <alias>` | View Clip commands and parameters | Yes |
 | `pinix invoke <alias> <command>` | Invoke a Clip | Yes |
-| `pinix upgrade` | Upgrade Pinix | No |
+| `pinix registry search <query>` | Search the Registry | No |
+| `pinix upgrade` | Upgrade Pinix itself | No |
 
 ## Build from Source
 
@@ -211,15 +214,27 @@ curl -fsSL https://bun.sh/install | bash
 npm install -g bb-browser
 ```
 
-## Upgrade
+## Update Clips
+
+```bash
+# 更新单个 Clip 到最新版
+pinix hub update todo
+
+# 更新所有 Registry 安装的 Clip
+pinix hub update --all
+
+# 更新到指定版本
+pinix hub update todo --version 1.2.0
+```
+
+<Aside>
+  Only Clips installed from the Registry (`@scope/name`) can be updated. Locally installed and GitHub-installed Clips need to be added again with `hub add`.
+</Aside>
+
+## Upgrade Pinix
 
 ```bash
 pinix upgrade
 ```
 
-This automatically downloads the latest binary and updates bb-browser.
-
-## Next Steps
-
-- [Build Your First Clip](/getting-started/first-clip/)
-- [Learn the Core Concepts](/concepts/)
+This upgrades the Pinix binary itself and updates bb-browser. It does not affect installed Clips.
