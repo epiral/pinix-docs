@@ -5,20 +5,22 @@
 
 @import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;700&display=swap");
 
-/* ── Light mode ── */
+/* ── Dark mode (default in Starlight) ──
+   Starlight convention: "white" = text/foreground, "black" = background
+   gray-1 = near text (light), gray-6 = near background (dark) */
 :root {
-  --sl-color-accent-low: oklch(0.92 0.04 276);
-  --sl-color-accent: oklch(0.53 0.162 276);
-  --sl-color-accent-high: oklch(0.3 0.1 276);
+  --sl-color-accent-low: oklch(0.25 0.06 276);
+  --sl-color-accent: oklch(0.65 0.18 276);
+  --sl-color-accent-high: oklch(0.88 0.06 276);
 
-  --sl-color-white: oklch(0.985 0 0);
-  --sl-color-gray-1: oklch(0.94 0.005 276);
-  --sl-color-gray-2: oklch(0.89 0.008 276);
-  --sl-color-gray-3: oklch(0.78 0.01 276);
-  --sl-color-gray-4: oklch(0.56 0.015 276);
-  --sl-color-gray-5: oklch(0.42 0.02 276);
-  --sl-color-gray-6: oklch(0.25 0.02 276);
-  --sl-color-black: oklch(0.15 0.02 276);
+  --sl-color-white: oklch(0.96 0 0);
+  --sl-color-gray-1: oklch(0.85 0.008 276);
+  --sl-color-gray-2: oklch(0.72 0.01 276);
+  --sl-color-gray-3: oklch(0.56 0.015 276);
+  --sl-color-gray-4: oklch(0.4 0.015 276);
+  --sl-color-gray-5: oklch(0.28 0.015 276);
+  --sl-color-gray-6: oklch(0.2 0.015 276);
+  --sl-color-black: oklch(0.15 0.015 276);
 
   --sl-font: "Inter", "Noto Sans SC", system-ui, sans-serif;
   --sl-font-mono: "JetBrains Mono", ui-monospace, monospace;
@@ -28,47 +30,288 @@
   --sl-text-h3: clamp(1.125rem, 2.5vw, 1.375rem);
 }
 
-/* ── Dark mode ── */
-:root[data-theme="dark"] {
-  --sl-color-accent-low: oklch(0.25 0.06 276);
-  --sl-color-accent: oklch(0.65 0.18 276);
-  --sl-color-accent-high: oklch(0.88 0.06 276);
+/* ── Light mode ──
+   "white" = text/foreground (dark), "black" = background (light)
+   gray-1 = near text (dark), gray-6 = near background (light) */
+:root[data-theme="light"] {
+  --sl-color-accent-low: oklch(0.92 0.04 276);
+  --sl-color-accent: oklch(0.53 0.162 276);
+  --sl-color-accent-high: oklch(0.3 0.1 276);
 
-  --sl-color-white: oklch(0.15 0.015 276);
-  --sl-color-gray-1: oklch(0.2 0.015 276);
-  --sl-color-gray-2: oklch(0.28 0.015 276);
-  --sl-color-gray-3: oklch(0.4 0.015 276);
-  --sl-color-gray-4: oklch(0.56 0.015 276);
-  --sl-color-gray-5: oklch(0.72 0.01 276);
-  --sl-color-gray-6: oklch(0.85 0.008 276);
-  --sl-color-black: oklch(0.96 0 0);
+  --sl-color-white: oklch(0.16 0.02 276);
+  --sl-color-gray-1: oklch(0.22 0.015 276);
+  --sl-color-gray-2: oklch(0.33 0.015 276);
+  --sl-color-gray-3: oklch(0.45 0.01 276);
+  --sl-color-gray-4: oklch(0.58 0.01 276);
+  --sl-color-gray-5: oklch(0.78 0.008 276);
+  --sl-color-gray-6: oklch(0.93 0.005 276);
+  --sl-color-gray-7: oklch(0.96 0.003 276);
+  --sl-color-black: oklch(0.99 0 0);
 }
 
 /* ── Typography ── */
-h1,
-h2,
-h3 {
+h1 {
   font-family: "Instrument Serif", "Noto Serif SC", serif;
+  font-style: italic;
   letter-spacing: -0.02em;
 }
 
-h1 {
-  font-style: italic;
+h2, h3, h4, h5, h6 {
+  font-family: "Inter", "Noto Sans SC", system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
-/* ── Code blocks ── */
-.expressive-code .frame {
-  border-radius: 8px;
+/* ── Body text readability ── */
+.sl-markdown-content {
+  --sl-text-body: 1rem;
+  line-height: 1.75;
+  max-width: 48rem;
+}
+
+.sl-markdown-content p {
+  margin-bottom: 1.25em;
+}
+
+/* ── Heading spacing ── */
+.sl-markdown-content h2 {
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--sl-color-gray-5);
+}
+
+/* No border on first h2 (e.g., landing page "Get started") */
+.sl-markdown-content h2:first-child,
+.hero ~ .sl-markdown-content h2:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.sl-markdown-content h3 {
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
 }
 
 /* ── Sidebar refinement ── */
+/* Remove default heavy active state, add left border + soft bg */
 .sidebar-content a[aria-current="page"] {
   font-weight: 600;
+  color: var(--sl-color-accent);
+  background: var(--sl-color-accent-low);
+  border-left: 2px solid var(--sl-color-accent);
+  border-radius: 0 6px 6px 0;
+  padding-left: 0.75rem;
+  margin-left: -2px;
+}
+
+/* Sidebar non-active links — ensure readable contrast in dark mode */
+.sidebar-content a {
+  color: var(--sl-color-gray-2);
+  transition: color 0.15s ease;
+}
+
+/* Sidebar link hover */
+.sidebar-content a:hover {
+  color: var(--sl-color-accent);
+}
+
+/* Sidebar typography */
+.sidebar-content {
+  font-size: 0.875rem;
+}
+
+/* ── Landing page background glow ── */
+/* Hero section ambient glow (dark mode default, removed in light mode) */
+.hero {
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, oklch(0.3 0.12 276 / 0.4), transparent);
+}
+
+:root[data-theme="light"] .hero {
+  background: none;
+}
+
+/* ── Landing card hover effects ── */
+/* Card base styling */
+.sl-link-card {
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 12px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Card hover */
+.sl-link-card:hover {
+  border-color: var(--sl-color-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px oklch(0.4 0.15 276 / 0.2);
+}
+
+/* ── Hero CTA buttons enhancement ── */
+/* Primary button glow */
+.hero .sl-link-button.primary {
+  box-shadow: 0 2px 12px oklch(0.5 0.16 276 / 0.3);
+  transition: all 0.2s ease;
+}
+
+.hero .sl-link-button.primary:hover {
+  box-shadow: 0 4px 20px oklch(0.5 0.16 276 / 0.5);
+  transform: translateY(-1px);
+}
+
+/* Secondary button subtle hover */
+.hero .sl-link-button:not(.primary) {
+  transition: all 0.2s ease;
+}
+
+.hero .sl-link-button:not(.primary):hover {
+  border-color: var(--sl-color-accent);
+  color: var(--sl-color-accent);
+}
+
+/* ── Right TOC refinement ── */
+/* TOC container */
+.right-sidebar-panel {
+  font-size: 0.8125rem;
+}
+
+/* TOC heading */
+starlight-toc h2 {
+  font-family: "Inter", sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sl-color-gray-3);
+  margin-bottom: 0.75rem;
+}
+
+/* TOC links */
+starlight-toc a {
+  color: var(--sl-color-gray-3);
+  line-height: 1.6;
+  padding: 0.2rem 0;
+  transition: color 0.15s ease;
+}
+
+starlight-toc a:hover {
+  color: var(--sl-color-accent);
+}
+
+starlight-toc a[aria-current="true"] {
+  color: var(--sl-color-accent);
+  font-weight: 500;
+}
+
+/* ── Code block refinement ── */
+/* Code block wrapper */
+.expressive-code .frame {
+  border-radius: 8px;
+  border: 1px solid var(--sl-color-gray-5);
+}
+
+/* Inline code */
+:not(pre) > code {
+  background: var(--sl-color-gray-6);
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  font-size: 0.875em;
+}
+
+/* ── Horizontal rules ── */
+.sl-markdown-content hr,
+.hero ~ hr {
+  border: none;
+  border-top: 1px solid var(--sl-color-gray-5);
+  margin: 2.5rem 0;
+}
+
+/* ── Stepper (Steps component) ── */
+/* Brand-colored step counter circles */
+.sl-steps > li::before {
+  background: var(--sl-color-accent-low);
+  color: var(--sl-color-accent);
+  border: 1.5px solid var(--sl-color-accent);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Step connector line */
+.sl-steps > li::after {
+  background: var(--sl-color-gray-5);
+}
+
+/* ── Admonitions (Aside) ── */
+/* Unified aside styling — refined border + rounded + brand-tinted background */
+.starlight-aside {
+  border-radius: 8px;
+  border-left-width: 3px;
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+}
+
+/* Aside title — tighter, uppercase label */
+.starlight-aside__title {
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  gap: 0.375rem;
+}
+
+/* Note variant — brand indigo tint */
+.starlight-aside--note {
+  border-color: var(--sl-color-accent);
+  background: oklch(from var(--sl-color-accent) l c h / 0.06);
+}
+
+/* Tip variant — keep green but refine */
+.starlight-aside--tip {
+  border-radius: 8px;
+}
+
+/* Caution variant */
+.starlight-aside--caution {
+  border-radius: 8px;
+}
+
+/* Danger variant */
+.starlight-aside--danger {
+  border-radius: 8px;
+}
+
+/* ── Header refinement ── */
+/* Subtle bottom border + backdrop blur for scroll overlap */
+header {
+  border-bottom: 1px solid var(--sl-color-gray-5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+:root[data-theme="light"] header {
+  border-bottom-color: var(--sl-color-gray-5);
+}
+
+/* ── Link styling ── */
+/* Content links — accent colored with subtle underline */
+.sl-markdown-content a:not(.sl-link-button) {
+  color: var(--sl-color-accent);
+  text-decoration: underline;
+  text-decoration-color: oklch(from var(--sl-color-accent) l c h / 0.3);
+  text-underline-offset: 2px;
+  transition: text-decoration-color 0.15s ease;
+}
+
+.sl-markdown-content a:not(.sl-link-button):hover {
+  text-decoration-color: var(--sl-color-accent);
 }
 
 /* ── Table improvements ── */
 table {
   font-size: 0.875rem;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 table th {
@@ -76,4 +319,14 @@ table th {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+table td, table th {
+  border-color: var(--sl-color-gray-5);
+}
+
+/* ── Smooth scrolling ── */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
 }
