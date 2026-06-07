@@ -1,26 +1,30 @@
 /* Pinix Docs — Custom Theme
-   Brand: Electric Indigo / Royal Amethyst (H=276 OKLCH)
-   Fonts: Instrument Serif (headings), Inter (body), JetBrains Mono (code)
+   Brand: Ochre Sand / Warm Earth (H=78 OKLCH)
+   Design language: 温润如玉 (subsurface scattering, river-rounded)
+                    静奢風 (separation by intervals, not containers)
+                    大地色 (OKLCH H=78 all neutrals, terraced lightness)
+   Fonts: Instrument Serif (h1), Inter (body/headings), JetBrains Mono (code)
 */
 
 @import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;700&display=swap");
 
 /* ── Dark mode (default in Starlight) ──
    Starlight convention: "white" = text/foreground, "black" = background
-   gray-1 = near text (light), gray-6 = near background (dark) */
+   gray-1 = near text (light), gray-6 = near background (dark)
+   All neutrals injected with H=78 warm undertone */
 :root {
-  --sl-color-accent-low: oklch(0.25 0.06 276);
-  --sl-color-accent: oklch(0.65 0.18 276);
-  --sl-color-accent-high: oklch(0.88 0.06 276);
+  --sl-color-accent-low: oklch(0.25 0.04 78);
+  --sl-color-accent: oklch(0.62 0.12 78);
+  --sl-color-accent-high: oklch(0.88 0.04 78);
 
-  --sl-color-white: oklch(0.96 0 0);
-  --sl-color-gray-1: oklch(0.85 0.008 276);
-  --sl-color-gray-2: oklch(0.72 0.01 276);
-  --sl-color-gray-3: oklch(0.56 0.015 276);
-  --sl-color-gray-4: oklch(0.4 0.015 276);
-  --sl-color-gray-5: oklch(0.28 0.015 276);
-  --sl-color-gray-6: oklch(0.2 0.015 276);
-  --sl-color-black: oklch(0.15 0.015 276);
+  --sl-color-white: oklch(0.96 0.005 78);
+  --sl-color-gray-1: oklch(0.85 0.008 78);
+  --sl-color-gray-2: oklch(0.72 0.01 78);
+  --sl-color-gray-3: oklch(0.56 0.012 78);
+  --sl-color-gray-4: oklch(0.4 0.012 78);
+  --sl-color-gray-5: oklch(0.28 0.012 78);
+  --sl-color-gray-6: oklch(0.2 0.012 78);
+  --sl-color-black: oklch(0.15 0.01 78);
 
   --sl-font: "Inter", "Noto Sans SC", system-ui, sans-serif;
   --sl-font-mono: "JetBrains Mono", ui-monospace, monospace;
@@ -31,22 +35,22 @@
 }
 
 /* ── Light mode ──
-   "white" = text/foreground (dark), "black" = background (light)
-   gray-1 = near text (dark), gray-6 = near background (light) */
+   Terraced lightness: sidebar → content bg → card
+   "white" = text/foreground (dark), "black" = background (light) */
 :root[data-theme="light"] {
-  --sl-color-accent-low: oklch(0.92 0.04 276);
-  --sl-color-accent: oklch(0.53 0.162 276);
-  --sl-color-accent-high: oklch(0.3 0.1 276);
+  --sl-color-accent-low: oklch(0.94 0.03 78);
+  --sl-color-accent: oklch(0.50 0.10 78);
+  --sl-color-accent-high: oklch(0.30 0.06 78);
 
-  --sl-color-white: oklch(0.16 0.02 276);
-  --sl-color-gray-1: oklch(0.22 0.015 276);
-  --sl-color-gray-2: oklch(0.33 0.015 276);
-  --sl-color-gray-3: oklch(0.45 0.01 276);
-  --sl-color-gray-4: oklch(0.58 0.01 276);
-  --sl-color-gray-5: oklch(0.78 0.008 276);
-  --sl-color-gray-6: oklch(0.93 0.005 276);
-  --sl-color-gray-7: oklch(0.96 0.003 276);
-  --sl-color-black: oklch(0.99 0 0);
+  --sl-color-white: oklch(0.18 0.015 78);
+  --sl-color-gray-1: oklch(0.24 0.012 78);
+  --sl-color-gray-2: oklch(0.35 0.012 78);
+  --sl-color-gray-3: oklch(0.48 0.008 78);
+  --sl-color-gray-4: oklch(0.60 0.008 78);
+  --sl-color-gray-5: oklch(0.80 0.006 78);
+  --sl-color-gray-6: oklch(0.945 0.005 78);
+  --sl-color-gray-7: oklch(0.975 0.003 78);
+  --sl-color-black: oklch(0.995 0.002 78);
 }
 
 /* ── Typography ── */
@@ -73,18 +77,29 @@ h2, h3, h4, h5, h6 {
   margin-bottom: 1.25em;
 }
 
-/* ── Heading spacing ── */
+/* ── Heading spacing ──
+   温润如玉: gradient-fade divider replaces hard border-top */
 .sl-markdown-content h2 {
   margin-top: 2.5rem;
   margin-bottom: 0.75rem;
   padding-top: 1.5rem;
-  border-top: 1px solid var(--sl-color-gray-5);
+  border-top: none;
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.80 0.01 78 / 0.4) 10%,
+    oklch(0.80 0.01 78 / 0.4) 90%,
+    transparent
+  );
+  background-size: 100% 1px;
+  background-repeat: no-repeat;
+  background-position: top;
 }
 
-/* No border on first h2 (e.g., landing page "Get started") */
+/* No divider on first h2 */
 .sl-markdown-content h2:first-child,
 .hero ~ .sl-markdown-content h2:first-of-type {
-  border-top: none;
+  background-image: none;
   padding-top: 0;
 }
 
@@ -93,25 +108,25 @@ h2, h3, h4, h5, h6 {
   margin-bottom: 0.5rem;
 }
 
-/* ── Sidebar refinement ── */
-/* Remove default heavy active state, add left border + soft bg */
+/* ── Sidebar refinement ──
+   温润如玉: rounded-xl active state, warm bg tint */
 .sidebar-content a[aria-current="page"] {
   font-weight: 600;
   color: var(--sl-color-accent);
   background: var(--sl-color-accent-low);
   border-left: 2px solid var(--sl-color-accent);
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 10px 10px 0;
   padding-left: 0.75rem;
   margin-left: -2px;
 }
 
-/* Sidebar non-active links — ensure readable contrast in dark mode */
+/* Sidebar non-active links */
 .sidebar-content a {
   color: var(--sl-color-gray-2);
   transition: color 0.15s ease;
 }
 
-/* Sidebar link hover */
+/* Sidebar link hover — ghost range 0.02-0.04 */
 .sidebar-content a:hover {
   color: var(--sl-color-accent);
 }
@@ -121,40 +136,49 @@ h2, h3, h4, h5, h6 {
   font-size: 0.875rem;
 }
 
-/* ── Landing page background glow ── */
-/* Hero section ambient glow (dark mode default, removed in light mode) */
+/* ── Landing page background glow ──
+   大地色: warm ochre ambient glow */
 .hero {
-  background: radial-gradient(ellipse 80% 50% at 50% -20%, oklch(0.3 0.12 276 / 0.4), transparent);
+  background: radial-gradient(
+    ellipse 80% 50% at 50% -20%,
+    oklch(0.35 0.08 78 / 0.35),
+    transparent
+  );
 }
 
 :root[data-theme="light"] .hero {
-  background: none;
+  background: radial-gradient(
+    ellipse 80% 50% at 50% -20%,
+    oklch(0.88 0.04 78 / 0.2),
+    transparent
+  );
 }
 
-/* ── Landing card hover effects ── */
-/* Card base styling */
+/* ── Landing card hover effects ──
+   温润如玉: rounded-xl, warm shadow, subsurface glow on hover */
 .sl-link-card {
   border: 1px solid var(--sl-color-gray-5);
   border-radius: 12px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Card hover */
 .sl-link-card:hover {
-  border-color: var(--sl-color-accent);
+  border-color: oklch(0.75 0.04 78);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px -5px oklch(0.4 0.15 276 / 0.2);
+  box-shadow:
+    0 8px 25px -5px oklch(0.5 0.06 78 / 0.15),
+    0 0 0 1px oklch(0.85 0.03 78 / 0.2);
 }
 
-/* ── Hero CTA buttons enhancement ── */
-/* Primary button glow */
+/* ── Hero CTA buttons ──
+   大地色: warm ochre glow instead of indigo */
 .hero .sl-link-button.primary {
-  box-shadow: 0 2px 12px oklch(0.5 0.16 276 / 0.3);
+  box-shadow: 0 2px 12px oklch(0.45 0.08 78 / 0.3);
   transition: all 0.2s ease;
 }
 
 .hero .sl-link-button.primary:hover {
-  box-shadow: 0 4px 20px oklch(0.5 0.16 276 / 0.5);
+  box-shadow: 0 4px 20px oklch(0.45 0.08 78 / 0.45);
   transform: translateY(-1px);
 }
 
@@ -169,12 +193,10 @@ h2, h3, h4, h5, h6 {
 }
 
 /* ── Right TOC refinement ── */
-/* TOC container */
 .right-sidebar-panel {
   font-size: 0.8125rem;
 }
 
-/* TOC heading */
 starlight-toc h2 {
   font-family: "Inter", sans-serif;
   font-size: 0.6875rem;
@@ -185,7 +207,6 @@ starlight-toc h2 {
   margin-bottom: 0.75rem;
 }
 
-/* TOC links */
 starlight-toc a {
   color: var(--sl-color-gray-3);
   line-height: 1.6;
@@ -202,31 +223,39 @@ starlight-toc a[aria-current="true"] {
   font-weight: 500;
 }
 
-/* ── Code block refinement ── */
-/* Code block wrapper */
+/* ── Code block refinement ──
+   温润如玉: rounded-xl (12px), warm border */
 .expressive-code .frame {
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid var(--sl-color-gray-5);
 }
 
-/* Inline code */
+/* Inline code — rounded-[6px], warm bg */
 :not(pre) > code {
   background: var(--sl-color-gray-6);
-  padding: 0.15em 0.35em;
-  border-radius: 4px;
+  padding: 0.15em 0.4em;
+  border-radius: 6px;
   font-size: 0.875em;
 }
 
-/* ── Horizontal rules ── */
+/* ── Horizontal rules ──
+   温润如玉: gradient-fade divider, both ends dissolve */
 .sl-markdown-content hr,
 .hero ~ hr {
   border: none;
-  border-top: 1px solid var(--sl-color-gray-5);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.80 0.01 78 / 0.4) 15%,
+    oklch(0.80 0.01 78 / 0.4) 85%,
+    transparent
+  );
   margin: 2.5rem 0;
 }
 
-/* ── Stepper (Steps component) ── */
-/* Brand-colored step counter circles */
+/* ── Stepper (Steps component) ──
+   Brand-colored step counter circles */
 .sl-steps > li::before {
   background: var(--sl-color-accent-low);
   color: var(--sl-color-accent);
@@ -236,21 +265,19 @@ starlight-toc a[aria-current="true"] {
   font-weight: 600;
 }
 
-/* Step connector line */
 .sl-steps > li::after {
   background: var(--sl-color-gray-5);
 }
 
-/* ── Admonitions (Aside) ── */
-/* Unified aside styling — refined border + rounded + brand-tinted background */
+/* ── Admonitions (Aside) ──
+   温润如玉: rounded-xl, warm brand tint */
 .starlight-aside {
-  border-radius: 8px;
+  border-radius: 12px;
   border-left-width: 3px;
   padding: 1rem 1.25rem;
   margin: 1.5rem 0;
 }
 
-/* Aside title — tighter, uppercase label */
 .starlight-aside__title {
   font-family: "Inter", sans-serif;
   font-size: 0.75rem;
@@ -260,41 +287,39 @@ starlight-toc a[aria-current="true"] {
   gap: 0.375rem;
 }
 
-/* Note variant — brand indigo tint */
+/* Note variant — warm ochre tint */
 .starlight-aside--note {
   border-color: var(--sl-color-accent);
   background: oklch(from var(--sl-color-accent) l c h / 0.06);
 }
 
-/* Tip variant — keep green but refine */
 .starlight-aside--tip {
-  border-radius: 8px;
+  border-radius: 12px;
 }
 
-/* Caution variant */
 .starlight-aside--caution {
-  border-radius: 8px;
+  border-radius: 12px;
 }
 
-/* Danger variant */
 .starlight-aside--danger {
-  border-radius: 8px;
+  border-radius: 12px;
 }
 
-/* ── Header refinement ── */
-/* Subtle bottom border + backdrop blur for scroll overlap */
+/* ── Header refinement ──
+   温润如玉: gradient-fade bottom border, not hard line */
 header {
-  border-bottom: 1px solid var(--sl-color-gray-5);
+  border-bottom: none;
+  box-shadow: 0 1px 0 0 oklch(0.80 0.008 78 / 0.3);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
 :root[data-theme="light"] header {
-  border-bottom-color: var(--sl-color-gray-5);
+  box-shadow: 0 1px 0 0 oklch(0.85 0.008 78 / 0.4);
 }
 
-/* ── Link styling ── */
-/* Content links — accent colored with subtle underline */
+/* ── Link styling ──
+   Accent-colored with subtle translucent underline */
 .sl-markdown-content a:not(.sl-link-button) {
   color: var(--sl-color-accent);
   text-decoration: underline;
@@ -307,10 +332,11 @@ header {
   text-decoration-color: var(--sl-color-accent);
 }
 
-/* ── Table improvements ── */
+/* ── Table improvements ──
+   温润如玉: rounded-xl overflow, warm borders */
 table {
   font-size: 0.875rem;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
